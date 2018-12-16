@@ -22,7 +22,7 @@ SWEP.HL2MaxMass			= 5500
 SWEP.MaxPuntRange		= 5000
 SWEP.HL2MaxPuntRange	= 550
 SWEP.MaxPickupRange		= 850
-SWEP.MaxTargetHealth	= 250
+SWEP.MaxTargetHealth	= 125
 SWEP.Distance			= 55 -- 35
 	
 SWEP.Primary.ClipSize		= -1
@@ -39,7 +39,7 @@ if (CLIENT) then
 	SWEP.PrintName			= "SUPER GRAVITY GUN"
 	SWEP.Author			= "ErrolLiamP, Î¤yler Blu, QuentinDylanP"
 	SWEP.Slot			= 1
-	SWEP.SlotPos			= 9
+	SWEP.SlotPos			= 0
 	SWEP.IconLetter			= "k"
 end
 	
@@ -54,8 +54,9 @@ function SWEP:Initialize()
 		self:SetSkin(1)
 		self.Fade = true
 		self.RagdollRemoved = false
-		--self.CoreAllowRemove = true
-		--self.GlowAllowRemove = true
+		self.CoreAllowRemove = true
+		self.GlowAllowRemove = true
+		self.MuzzleAllowRemove = true
 		self.HPCollideG = COLLISION_GROUP_NONE
 		if SERVER then
 			util.AddNetworkString( "PlayerKilledNPC" )
@@ -125,6 +126,19 @@ end
 			end )
 		end
 		
+		if (SERVER) then
+			if !IsValid(self.Muzzle) and self.MuzzleAllowRemove == false then
+				self.Muzzle = ents.Create("PhyscannonMuzzle")
+				self.Muzzle:SetPos( self.Owner:GetShootPos() )
+				self.Muzzle:Spawn()
+				self.Muzzle:SetParent(self.Owner)
+				self.Muzzle:SetOwner(self.Owner)
+			end
+			if IsValid(self.Muzzle) and self.MuzzleAllowRemove == true then
+				self.Muzzle:Remove()
+				self.Muzzle = nil
+			end
+		end
 		if IsValid(self.Core) then
 			self.Core:SetPos( self.Owner:GetShootPos() )
 		end
@@ -293,7 +307,7 @@ function SWEP:NotAllowedClass()
 		if class == "npc_strider"
 			or class == "npc_helicopter"
 			or class == "npc_combinedropship"
-			or class == "npc_barnacle"
+			--or class == "npc_barnacle"
 			or class == "npc_antliongrub"
 			or class == "npc_turret_ceiling"
 			or class == "npc_combine_camera"
@@ -351,6 +365,7 @@ function SWEP:AllowedClass()
 			or class == "weapon_slam"
 			or class == "weapon_smg1"
 			or class == "weapon_stunstick"]]
+			or class == "megaphyscannon"
 			or class == "weapon_striderbuster"
 			or class == "combine_mine"
 			--[[or class == "gmod_tool"
@@ -363,10 +378,13 @@ function SWEP:AllowedClass()
 			or class == "prop_combine_ball"
 			or class == "prop_wheel"
 			or class == "prop_vehicle_prisoner_pod"
+			or class == "prop_physics_respawnable"
 			or class == "prop_physics_multiplayer"
 			or class == "prop_physics"
 			or class == "prop_dynamic"
 			or class == "func_brush"	then
+		return true
+		elseif !trace.Entity:IsNPC() and !trace.Entity:IsRagdoll() and GetConVar("scgg_allow_others"):GetInt() >= 1 and !self:NotAllowedClass() then
 		return true
 		else
 		return false
@@ -378,7 +396,7 @@ function SWEP:FriendlyNPC( npc )
 	if !IsValid(npc) then return false end
 	if !npc:IsNPC() then return false end
 	
-	if npc:Disposition( self.Owner ) == D_LI then
+	if npc:Disposition( self.Owner ) == (D_LI or D_NU or D_ER) then
 		return true
 	else
 		return false
@@ -447,7 +465,7 @@ function SWEP:PrimaryAttack()
 					--self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
 					--return
 				--end
-				if ( GetConVar("scgg_style"):GetInt() <= 0 and tgt:Health() > self.MaxTargetHealth ) or !util.IsValidRagdoll(tgt:GetModel()) then
+				if ( GetConVar("scgg_style"):GetInt() <= 0 and tgt:Health() > self.MaxTargetHealth ) or ( !util.IsValidRagdoll(tgt:GetModel()) ) then
 					local dmginfo = DamageInfo()
 					dmginfo:SetDamage( self.MaxTargetHealth )
 					dmginfo:SetAttacker( self.Owner )
@@ -456,11 +474,11 @@ function SWEP:PrimaryAttack()
 				else
 				
 				if tgt:IsPlayer() then
-					net.Start( "PlayerKilledByPlayer" )
+					--[[net.Start( "PlayerKilledByPlayer" )
 					net.WriteEntity( tgt )
 					net.WriteString( "weapon_superphyscannon" )
 					net.WriteEntity( self.Owner )
-					net.Broadcast()
+					net.Broadcast()--]]
 				elseif tgt:IsNPC() then
 					if tgt:GetShouldServerRagdoll() != true then
 					tgt:SetShouldServerRagdoll( true )
@@ -506,7 +524,8 @@ function SWEP:PrimaryAttack()
 				end
 				ragdoll:SetMaterial( tgt:GetMaterial() )
 				
-				--[[if tgt:GetActiveWeapon():IsValid() then
+				-- Just in case the NPC is scripted like VJ Base
+				if tgt:GetActiveWeapon():IsValid() then
 				local wep = trace.Entity:GetActiveWeapon()
 				--local model = wep:GetModel()
 				local wepclass = wep:GetClass()
@@ -544,7 +563,7 @@ function SWEP:PrimaryAttack()
 				end
 				
 					end
-				end--]]
+				end
 				
 			if GetConVar("scgg_zap"):GetInt() >= 1 then
 			local effect  	= EffectData()
@@ -582,15 +601,26 @@ function SWEP:PrimaryAttack()
 				--end
 				
 				cleanup.Add (self.Owner, "props", ragdoll);
-				undo.Create ("ragdoll");
+				undo.Create ("Ragdoll");
 				undo.AddEntity (ragdoll);
 				undo.SetPlayer (self.Owner);
 				undo.Finish();
 				
 				if tgt:IsPlayer() then
-					tgt:KillSilent()
+					--tgt:KillSilent()
 					--ragdoll:SetPlayerColor( tgt:GetPlayerColor() )
-					tgt:AddDeaths(1)
+					--tgt:AddDeaths(1)
+					local dmg = DamageInfo()
+					dmg:SetDamage( tgt:Health() )
+					dmg:SetDamageForce( Vector( 0, 0, 0 ) )
+					dmg:SetDamageType( DMG_SHOCK )
+					dmg:SetAttacker( self.Owner )
+					dmg:SetInflictor( self.Weapon )
+					dmg:SetReportedPosition( self.Owner:GetShootPos() )
+					tgt:TakeDamageInfo( dmg )
+					if tgt:GetRagdollEntity():IsValid() then
+						tgt:GetRagdollEntity():Remove()
+					end
 					tgt:SpectateEntity(ragdoll)
 					tgt:Spectate(OBS_MODE_CHASE)
 
@@ -645,6 +675,7 @@ function SWEP:PrimaryAttack()
 			end
 			
 			end
+			
 			self:Visual()
 			--self:DoSparks()
 		end
@@ -661,6 +692,7 @@ function SWEP:PrimaryAttack()
 				end)
 			end
 			if (SERVER) then
+				if !IsValid(tgt) or !IsValid(tgt:GetPhysicsObject()) then return end
 				local position = trace.HitPos
 				if GetConVar("scgg_style"):GetInt() <= 0 then --Prop Punting
 				
@@ -686,7 +718,7 @@ function SWEP:PrimaryAttack()
 				end
 				
 				end 
-			tgt:SetPhysicsAttacker(self.Owner, 2)
+			tgt:SetPhysicsAttacker(self.Owner, 4)
 			tgt:Fire("physdamagescale","99999",0)
 			
 			end
@@ -700,11 +732,11 @@ function SWEP:PrimaryAttack()
 					local bone = tgt:GetPhysicsObjectNum(i)
 					
 					if bone and bone.IsValid and bone:IsValid() then
-						bone:SetPhysicsAttacker(self.Owner, 2)
-						tgt:GetPhysicsObject():SetPhysicsAttacker(self.Owner, 2)
+						bone:SetPhysicsAttacker(self.Owner, 4)
+						tgt:GetPhysicsObject():SetPhysicsAttacker(self.Owner, 4)
 					end
 				end--]]
-				tgt:SetPhysicsAttacker(self.Owner, 2)
+				tgt:SetPhysicsAttacker(self.Owner, 4)
 				
 				if GetConVar("scgg_zap"):GetInt() >= 1 then
 				tgt:Fire("StartRagdollBoogie","",0) end
@@ -756,6 +788,15 @@ function SWEP:PrimaryAttack()
 				end )--]]
 			end
 		end
+		
+		if self:AllowedClass() then
+		local dinfo = DamageInfo();
+		dinfo:SetDamage( 1 );
+		dinfo:SetAttacker( self.Owner );
+		dinfo:SetInflictor( self );
+		tgt:TakeDamageInfo(dinfo)
+		end
+		
 	end
 	
 function SWEP:DropAndShoot()
@@ -766,7 +807,7 @@ function SWEP:DropAndShoot()
 		else
 		self.HP:SetCollisionGroup( self.HPCollideG )
 		end
-		self.HP:SetPhysicsAttacker(self.Owner, 2)
+		self.HP:SetPhysicsAttacker(self.Owner, 4)
 		self.HP:SetNWBool("launched_by_scgg", true)
 		self.Owner:SimulateGravGunDrop( self.HP )
 		
@@ -917,7 +958,8 @@ function SWEP:SecondaryAttack()
 		if ( GetConVar("scgg_style"):GetInt() <= 0 ) 
 		and 
 		( ( tgt:IsNPC() or tgt:IsPlayer() ) and tgt:Health() > self.MaxTargetHealth ) 
-		--or !util.IsValidRagdoll(tgt:GetModel()) 
+		or ( (tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and !util.IsValidRagdoll(tgt:GetModel()) and !util.IsValidProp(tgt:GetModel()) ) 
+		--or (!tgt:IsNPC() and !tgt:IsPlayer() and !tgt:IsRagdoll()) and !util.IsValidProp(tgt:GetModel())
 		then return end
 		
 		if !self:NotAllowedClass() and !self:AllowedClass() then
@@ -933,11 +975,11 @@ function SWEP:SecondaryAttack()
 				if tgt:IsNPC() and ( GetConVar("scgg_friendly_fire"):GetInt()>=1 or !self:FriendlyNPC(tgt) ) or tgt:IsPlayer() then
 					
 					if tgt:IsPlayer() then
-					net.Start( "PlayerKilledByPlayer" )
+					--[[net.Start( "PlayerKilledByPlayer" )
 					net.WriteEntity( tgt )
 					net.WriteString( "weapon_superphyscannon" )
 					net.WriteEntity( self.Owner )
-					net.Broadcast()
+					net.Broadcast()--]]
 					elseif tgt:IsNPC() then
 					if tgt:GetShouldServerRagdoll() != true then
 					tgt:SetShouldServerRagdoll( true )
@@ -984,7 +1026,7 @@ function SWEP:SecondaryAttack()
 					ragdoll:SetMaterial( tgt:GetMaterial() )
 					ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS_TRIGGER)
 					
-					--[[if tgt:GetActiveWeapon():IsValid() then
+					if tgt:GetActiveWeapon():IsValid() then
 						local wep = trace.Entity:GetActiveWeapon()
 						--local model = wep:GetModel()
 						local wepclass = wep:GetClass()
@@ -1024,19 +1066,31 @@ function SWEP:SecondaryAttack()
 						dissolver:Fire( "Kill", name, 0.10 )
 						end
 					end
-							end--]]
+							end
 					
 					cleanup.Add (self.Owner, "props", ragdoll);
-					undo.Create ("ragdoll");
+					undo.Create ("Ragdoll");
 					undo.AddEntity (ragdoll);
 					undo.SetPlayer (self.Owner);
+					undo.SetCustomUndoText( "Undone Ragdoll" )
 					undo.Finish();
 					
 					if tgt:IsPlayer() then
-						tgt:KillSilent()
+						--tgt:KillSilent()
 						--ragdoll:SetColor( tgt:GetPlayerColor()  )
-						tgt:AddDeaths(1)
-						self.Owner:AddFrags(1)
+						--tgt:AddDeaths(1)
+						--self.Owner:AddFrags(1)
+						local dmg = DamageInfo()
+						dmg:SetDamage( tgt:Health() )
+						dmg:SetDamageForce( Vector( 0, 0, 0 ) )
+						dmg:SetDamageType( DMG_SHOCK )
+						dmg:SetAttacker( self.Owner )
+						dmg:SetInflictor( self.Weapon )
+						dmg:SetReportedPosition( self.Owner:GetShootPos() )
+						tgt:TakeDamageInfo( dmg )
+						if tgt:GetRagdollEntity():IsValid() then
+							tgt:GetRagdollEntity():Remove()
+						end
 						tgt:SpectateEntity(ragdoll)
 						tgt:Spectate(OBS_MODE_CHASE)
 					elseif tgt:IsNPC() then
@@ -1285,7 +1339,7 @@ function SWEP:Visual()
 		Light:Activate()
 		Light:Fire("TurnOn", "", 0)
 		self:DeleteOnRemove(Light)
-		timer.Simple(0.1,function() if self:IsValid() then Light:Remove() end end)
+		timer.Simple(0.1,function() if self:IsValid() and Light:IsValid() then Light:Remove() end end)
 		end
 		end
 		if GetConVar("scgg_style"):GetInt() <= 0 then
@@ -1312,14 +1366,16 @@ function SWEP:Visual()
 		
 		if (SERVER) then
 			if GetConVar("scgg_no_effects"):GetInt() >= 1 then return end
-			if !self.Muzzle then
+			if !IsValid(self.Muzzle) then
 				self.Muzzle = ents.Create("PhyscannonMuzzle")
 				self.Muzzle:SetPos( self.Owner:GetShootPos() )
 				self.Muzzle:Spawn()
 			end
-			
+			self.MuzzleAllowRemove = false
+			if IsValid(self.Muzzle) then
 			self.Muzzle:SetParent(self.Owner)
 			self.Muzzle:SetOwner(self.Owner)
+			end
 			
 			timer.Simple( 0.12,
 		function() 
@@ -1384,13 +1440,14 @@ function SWEP:Deploy()
 		end
 		local vm = self.Owner:GetViewModel()
 		timer.Create( "deploy_idle" .. self:EntIndex(), vm:SequenceDuration(), 1, function()
-		if !IsValid( self.Weapon ) then return end
+		if !IsValid( self.Weapon ) then return true end
 		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
 			self.Weapon:SendWeaponAnim( ACT_VM_IDLE )
 		end
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.01 )
 		self.Weapon:SetNextSecondaryFire( CurTime() + 0.01 )
 		end)
+		return true
 	end
 
 function SWEP:Holster()
@@ -1450,6 +1507,8 @@ function SWEP:TPrem()
 	
 function SWEP:RemoveMuzzle()
 		if self.Muzzle then
+			if !IsValid(self.Muzzle) then return end
+			self.MuzzleAllowRemove = true
 			self.Muzzle:Remove()
 			self.Muzzle = nil
 		end

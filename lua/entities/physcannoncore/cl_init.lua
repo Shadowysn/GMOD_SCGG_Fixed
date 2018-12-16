@@ -1,11 +1,18 @@
 include('shared.lua')
 
-local Mat = Material( "sprites/blueflare1" )
+local Mat = Material( "sprites/blueflare1_noz" )
 Mat:SetInt("$spriterendermode",5)
+local MatWorld = Material( "sprites/blueflare1" )
+MatWorld:SetInt("$spriterendermode",5)
+local Main = Material( "effects/fluttercore" )
+Main:SetInt("$spriterendermode",5)
 ENT.RenderGroup 	= RENDERGROUP_TRANSLUCENT --RENDERGROUP_BOTH
 
 function ENT:Initialize()
+if IsValid(self) then
 Mat:SetInt("$spriterendermode",5)
+Main:SetInt("$spriterendermode",9)
+end
 end
 
 function ENT:Think()
@@ -14,7 +21,8 @@ end
 
 function ENT:Draw()
 	local scale = math.Rand( 8, 10 )
-	local scale2 = math.Rand( 25, 27 )
+	--local scale2 = math.Rand( 25, 27 )
+	local scale2 = math.Rand( 18, 22 )
 	local scale3 = math.Rand( 3, 4 )
 	local scale7 = math.Rand( 12, 14 )
 	if !IsValid(self) then return end
@@ -23,8 +31,6 @@ function ENT:Draw()
 	
 	local StartPos 		= self.Entity:GetPos()
 	local ViewModel 	= Owner == LocalPlayer()
-	
-	render.SetMaterial( Mat )
 	
 	if ( ViewModel ) and Owner:GetNWBool("Camera") == false and Owner:Alive() then
 		
@@ -55,8 +61,11 @@ function ENT:Draw()
 		local attachment_LH = vm:GetAttachment( attachmentID5 )
 		StartPosLH = attachment_LH.Pos
 		--if !IsValid(attachment) then return end
-		render.DrawSprite( StartPos, scale2, scale2, Color(255,255,255,240))
+		render.SetMaterial( Main )
+		--render.DrawSprite( StartPos, scale2, scale2, Color(255,255,255,240))
+		render.DrawSprite( StartPos, scale2, scale2, Color(255,255,255,90))
 		--if !IsValid(attachment_O) then return end
+		render.SetMaterial( Mat )
 		render.DrawSprite( StartPosO, scale, scale, Color(255,255,255,80))
 		--if !IsValid(attachment_L) then return end
 		render.DrawSprite( StartPosL, scale, scale, Color(255,255,255,80))
@@ -67,12 +76,11 @@ function ENT:Draw()
 		
 	
 		
-	else
+	elseif ( (!ViewModel) or Owner:GetNWBool("Camera") == true ) and Owner:Alive() then
 		local vm = Owner:GetActiveWeapon()
 		if (!vm || vm == NULL) then return end
 		if !Owner:Alive() then return end
 		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
-		--if Owner == LocalPlayer() and Owner:GetNWBool("Camera") == true then return end
 		
 		--if !IsValid(vm:LookupAttachment("core")) then return end
 		local attachmentID=vm:LookupAttachment("core")
@@ -115,8 +123,12 @@ function ENT:Draw()
 		local attachment_RH = vm:GetAttachment( attachmentID7 )
 		--if !IsValid(attachment_RH.Pos) then return end
 		StartPosRH = attachment_RH.Pos
-
+		
+--		render.SetMaterial( Main )
+		render.SetMaterial( MatWorld )
 		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,240))
+--		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,130))
+--		render.SetMaterial( MatWorld )
 		render.DrawSprite( StartPosO, scale3, scale3, Color(255,255,255,80))
 		render.DrawSprite( StartPosL, scale3, scale3, Color(255,255,255,80))
 		render.DrawSprite( StartPosR, scale3, scale3, Color(255,255,255,80))

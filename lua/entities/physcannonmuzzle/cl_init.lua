@@ -1,11 +1,15 @@
 include('shared.lua')
 
-local Mat = Material( "sprites/blueflare1" )
+local Mat = Material( "sprites/blueflare1_noz" )
 Mat:SetInt("$spriterendermode",5)
+local MatWorld = Material( "sprites/blueflare1" )
+MatWorld:SetInt("$spriterendermode",5)
 
 
 function ENT:Initialize()
+if IsValid(self) then
 Mat:SetInt("$spriterendermode",5)
+end
 end
 
 function ENT:Think()
@@ -19,27 +23,33 @@ function ENT:Draw()
 	local StartPos 		= self.Entity:GetPos()
 	local ViewModel 	= Owner == LocalPlayer()
 	
-	render.SetMaterial( Mat )
-	
 	if ( ViewModel ) and Owner:GetNWBool("Camera") == false then
 		
 		local vm = Owner:GetViewModel()
 		if (!vm || vm == NULL) then return end
+		if !Owner:Alive() then return end
+		if IsValid(Owner:GetActiveWeapon()) then
+		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
+		end
 		
 		local attachmentID=vm:LookupAttachment("muzzle")
 		local attachment = vm:GetAttachment(attachmentID)
 		StartPos = attachment.Pos
 		
+		render.SetMaterial( Mat )
 		render.DrawSprite( StartPos, scale4, scale4, Color(255,255,255,240))
 	else
 		
 		local vm = Owner:GetActiveWeapon()
 		if (!vm || vm == NULL) then return end
+		if !Owner:Alive() then return end
+		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
 		
 		local attachmentID=vm:LookupAttachment("core")
 		local attachment = vm:GetAttachment(attachmentID)
 		StartPos = attachment.Pos
 		
+		render.SetMaterial( MatWorld )
 		render.DrawSprite( StartPos, scale5, scale5, Color(255,255,255,240))
 	end
 end

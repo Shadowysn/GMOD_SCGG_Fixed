@@ -13,6 +13,7 @@ end
 
 function ENT:Think()
 	local Owner = self.Entity:GetOwner()
+	if !IsValid(Owner) then self.Entity:Remove() return end
 	
 	if Owner:GetViewEntity():GetClass() == "gmod_cameraprop" then
 		Owner:SetNWBool(	"Camera",			true)

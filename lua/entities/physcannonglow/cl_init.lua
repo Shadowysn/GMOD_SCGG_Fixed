@@ -1,14 +1,25 @@
 include('shared.lua')
 
-local Mat = Material( "sprites/blueflare1" )
+local Mat = Material( "sprites/blueflare1_noz" )
 Mat:SetInt("$spriterendermode",5)
+local MatWorld = Material( "sprites/blueflare1" )
+MatWorld:SetInt("$spriterendermode",5)
 local Zap = Material( "sprites/physcannon_bluelight1b" )
 Zap:SetInt("$spriterendermode",5)
+--local ZapWorld = Material( "sprites/bluelight1" )
+local ZapWorld = Material( "sprites/physbeama" )
+ZapWorld:SetInt("$spriterendermode",5)
+local Main = Material( "effects/fluttercore" )
+Main:SetInt("$spriterendermode",5)
 ENT.RenderGroup 	= RENDERGROUP_TRANSLUCENT
 
 function ENT:Initialize()
+if IsValid(self) then
 Mat:SetInt("$spriterendermode",5)
 Zap:SetInt("$spriterendermode",5)
+ZapWorld:SetInt("$spriterendermode",5)
+Main:SetInt("$spriterendermode",9)
+end
 end
 
 function ENT:Think()
@@ -17,7 +28,8 @@ end
 function ENT:Draw()
 	local scale = math.Rand( 8, 10 )
 	local scale3 = math.Rand( 3, 5 )
-	local scale6 = math.Rand( 35, 37 )
+	--local scale6 = math.Rand( 35, 37 )
+	local scale6 = math.Rand( 28, 35 )
 	local scale7 = math.Rand( 12, 14 )
 	local Owner = self.Entity:GetOwner()
 	if (!Owner || Owner == NULL) then return end
@@ -25,17 +37,21 @@ function ENT:Draw()
 	local StartPos 		= self.Entity:GetPos()
 	local ViewModel 	= Owner == LocalPlayer()
 	
-	render.SetMaterial( Mat )
-	
 	if ( ViewModel ) and Owner:GetNWBool("Camera") == false then
 		
 		local vm = Owner:GetViewModel()
 		if (!vm || vm == NULL) then return end
+		if !Owner:Alive() then return end
+		if IsValid(Owner:GetActiveWeapon()) then
+		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
+		end
 		
+		render.SetMaterial( Main )
 		local attachmentID=vm:LookupAttachment("muzzle")
 		local attachment = vm:GetAttachment(attachmentID)
 		StartPos = attachment.Pos
 		
+		render.SetMaterial( Mat )
 		local attachmentID0=vm:LookupAttachment("muzzle")
 		local attachment_R = vm:GetAttachment( attachmentID0 )
 		StartPosR = attachment_R.Pos
@@ -56,7 +72,10 @@ function ENT:Draw()
 		local attachment_LH = vm:GetAttachment( attachmentID5 )
 		StartPosLH = attachment_LH.Pos
 		
-		render.DrawSprite( StartPos, scale6, scale6, Color(255,255,255,240))
+		render.SetMaterial( Main )
+		--render.DrawSprite( StartPos, scale6, scale6, Color(255,255,255,240))
+		render.DrawSprite( StartPos, scale6, scale6, Color(255,255,255,80))
+		render.SetMaterial( Mat )
 		render.DrawSprite( StartPosO, scale, scale, Color(255,255,255,80))
 		render.DrawSprite( StartPosL, scale, scale, Color(255,255,255,80))
 		render.DrawSprite( StartPosOH, scale, scale, Color(255,255,255,80))
@@ -70,6 +89,8 @@ function ENT:Draw()
 		
 		local vm = Owner:GetActiveWeapon()
 		if (!vm || vm == NULL) then return end
+		if !Owner:Alive() then return end
+		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
 		
 		local attachmentID=vm:LookupAttachment("core")
 		local attachment = vm:GetAttachment(attachmentID)
@@ -99,7 +120,11 @@ function ENT:Draw()
 		local attachment_RH = vm:GetAttachment( attachmentID7 )
 		StartPosRH = attachment_RH.Pos
 		
+--		render.SetMaterial( Main )
+		render.SetMaterial( MatWorld )
 		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,240))
+--		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,140))
+--		render.SetMaterial( MatWorld )
 		render.DrawSprite( StartPosO, scale3, scale3, Color(255,255,255,80))
 		render.DrawSprite( StartPosL, scale3, scale3, Color(255,255,255,80))
 		render.DrawSprite( StartPosR, scale3, scale3, Color(255,255,255,80))
@@ -120,14 +145,17 @@ function ENT:Draw()
 	self.Length2 = (StartPosL - StartPos):Length()
 	self.Length3 = (StartPosR - StartPos):Length()
 	
-	render.SetMaterial( Zap )
 	if ( ViewModel ) and Owner:GetNWBool("Camera") == false then
+	render.SetMaterial( Zap )
 	render.DrawBeam( StartPosO, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128, Color( 255, 255, 255, 255 ) ) 
 	render.DrawBeam( StartPosL, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
-	render.DrawBeam( StartPosR, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) else
+	render.DrawBeam( StartPosR, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
+	else
+	render.SetMaterial( ZapWorld )
 	render.DrawBeam( StartPosO, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128, Color( 255, 255, 255, 255 ) ) 
 	render.DrawBeam( StartPosL, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
-	render.DrawBeam( StartPosR, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) end
+	render.DrawBeam( StartPosR, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
+	end
 end
 
 function ENT:IsTranslucent()

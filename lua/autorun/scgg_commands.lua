@@ -16,12 +16,16 @@ if !ConVarExists("scgg_zap") then
    CreateConVar("scgg_zap", '1', (FCVAR_GAMEDLL), "to toggle victims being electrocuted.", true, true)
 end
 
+if !ConVarExists("scgg_allow_others") then	
+   CreateConVar("scgg_allow_others", '1', (FCVAR_GAMEDLL), "to allow weapon interaction of other objects, including addons. (WILL have a chance to cause bugs.)", true, true)
+end
+
 if !ConVarExists("scgg_zap_sound") then	
-   CreateConVar("scgg_zap_sound", '1', (FCVAR_GAMEDLL), "to toggle electrocuted victims emitting sound.", true, true)
+   CreateConVar("scgg_zap_sound", '0', (FCVAR_GAMEDLL), "to toggle electrocuted victims emitting sound.", true, true)
 end
 
 if !ConVarExists("scgg_equip_sound") then	
-   CreateConVar("scgg_equip_sound", '1', (FCVAR_GAMEDLL), "to toggle sound emitted when deploying weapon.", true, true)
+   CreateConVar("scgg_equip_sound", '0', (FCVAR_GAMEDLL), "to toggle sound emitted when deploying weapon.", true, true)
 end
 
 if !ConVarExists("scgg_no_effects") then	
@@ -42,71 +46,42 @@ end
 
 --if SERVER then
 --function TheFunction(client, command, arguments, ply)
-    	--ply:Give("weapon_megaphyscannon")
+    	--ply:Give("weapon_superphyscannon")
 	--ply:StripWeapon( "weapon_physcannon" )
 --end
 
 --concommand.Add("physcannon_mega_enabled", TheFuction) end
 
 if SERVER then
---[[function SCGG_AutoGive()
-for _,ply in pairs(player.GetAll()) do
-	if !ply:HasWeapon("weapon_megaphyscannon") and (GetConVar("scgg_enabled"):GetInt() >= 2) then
-		ply:Give("weapon_megaphyscannon")
+
+--[[hook.Add("PlayerDroppedWeapon","SCGG_Weapon_CheckDrop",function( owner, wep )
+if GetConVar("scgg_weapon_vaporize"):GetInt() >= 2 then
+	if wep:GetClass() == "weapon_physcannon" then
+		local superphys = "weapon_superphyscannon"
+		if owner:HasWeapon(superphys) == true then
+			owner:StripWeapon(superphys)
+			print("heybab")
+		end
 	end
 end
-end
-hook.Add("Think","SCGG_Think_AutoGive",SCGG_AutoGive)--]]
-
---[[hook.Add("OnEntityCreated","SCGG_Weapon_Vaporize",function( entity ) 
-if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
-	--for _,wpn in pairs(ents.GetAll()) do
-	local wpn = entity
-	wpn.SCGG_Dissolving = false
-		if IsValid(wpn) and wpn:IsWeapon() then
-			wpn:SetKeyValue("spawnflags","2")
-		end
-			if IsValid(wpn) and wpn:IsValid() and wpn:IsWeapon() and !wpn:CreatedByMap() and wpn:GetClass() != ("weapon_physcannon" or "weapon_megaphyscannon") then
-		for _, child in pairs(wpn:GetChildren()) do
-			if child:GetClass() == "env_entity_dissolver" then
-				wpn.SCGG_Dissolving = true
-			end
-		end
-		--if !wpn:GetOwner():IsValid() and wpn.SCGG_Dissolving == false then
-		wpn:SetKeyValue("spawnflags","2")
-		local dissolver = ents.Create( "env_entity_dissolver" )
-		dissolver:SetPos( wpn:LocalToWorld(wpn:OBBCenter()) )
-		dissolver:SetKeyValue( "dissolvetype", 0 )
-		dissolver:Spawn()
-		dissolver:Activate()
-		local name = "SCGG_Dissolving_Weapon_"..math.random()
-		wpn:SetName( name )
-		dissolver:Fire( "Dissolve", name, 0 )
-		dissolver:Fire( "Kill", "", 0.05 )
-		end--
-			end
-		if IsValid(wpn) and wpn:IsWeapon() and wpn.SCGG_Dissolving == false then
-		wpn:SetKeyValue("spawnflags","0")
-		end
-	--end
-end
 end)--]]
-
+--cvars.AddChangeCallback( "scgg_weapon_vaporize", function( convar_name, value_old, value_new )
 hook.Add("Think","SCGG_Weapon_Vaporize_Think",function() 
 if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
+
 	for _,wpn in pairs(ents.GetAll()) do
 		wpn.SCGG_Dissolving = false
 		if IsValid(wpn) and wpn:IsWeapon() and !wpn:GetOwner():IsValid() then
 			wpn:SetKeyValue("spawnflags","2")
 		end
-			if IsValid(wpn) and wpn:IsValid() and ( wpn:IsWeapon() or wpn:GetClass() == "item_ammo_ar2_altfire" ) and !wpn:CreatedByMap() and wpn:GetClass() != ("weapon_physcannon" or "weapon_megaphyscannon") then
+			if IsValid(wpn) and wpn:IsValid() and ( wpn:IsWeapon() or wpn:GetClass() == "item_ammo_ar2_altfire" ) and !wpn:CreatedByMap() and wpn:GetClass() != ("weapon_physcannon" or "weapon_superphyscannon") then
 		for _, child in pairs(wpn:GetChildren()) do
 			if child:GetClass() == "env_entity_dissolver" then
 				wpn.SCGG_Dissolving = true
 			end
 		end
 		
-		if wpn:GetClass() == "item_ammo_ar2_altfire" then
+		if GetConVar("scgg_enabled"):GetInt() >= 2 and wpn:GetClass() == "item_ammo_ar2_altfire" then
 		local fakeitem = ents.Create("prop_physics_override")
 		fakeitem:SetPos( wpn:GetPos() )
 		fakeitem:SetAngles( wpn:GetAngles() )
@@ -145,7 +120,46 @@ if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
 		end
 	end
 end
+if game.GetGlobalState( "super_phys_gun") == GLOBAL_ON and GetConVar("scgg_enabled"):GetInt() != 1 then
+	if GetConVar("scgg_enabled"):GetInt() <= 0 then
+	GetConVar("scgg_enabled"):SetInt(2)
+	end
+	--[[for _,physcannon in pairs(ents.GetAll()) do
+		if physcannon:GetClass("weapon_physcannon") then
+		--local supermdl = "models/weapons/errolliamp/w_superphyscannon.mdl"
+		--local mdl = "models/weapons/w_physics.mdl"
+		
+		if !IsValid( physcannon:GetOwner() ) then
+			if physcannon:GetSkin() != 1 then
+			physcannon:SetSkin( 1 )
+			end
+		elseif IsValid( physcannon:GetOwner() ) then
+			if physcannon:GetSkin() != 0 then
+			physcannon:SetSkin( 0 )
+			end
+		end
+		
+		end
+	end--]]
+	for _,foundply in pairs(player.GetAll()) do
+		for _,weap in pairs( foundply:GetWeapons() ) do
+			if weap:GetClass() == "weapon_physcannon" then--or weap:GetClass() == "weapon_superphyscannon" then
+				if !foundply:HasWeapon("weapon_superphyscannon") then
+				foundply:Give("weapon_superphyscannon")
+				end
+				--[[if !foundply:HasWeapon("weapon_physcannon") then
+				foundply:Give("weapon_physcannon")
+				end--]]
+			end
+		end
+	end
+end
+if game.GetGlobalState( "super_phys_gun") == GLOBAL_OFF and GetConVar("scgg_enabled"):GetInt() != 0 then
+	GetConVar("scgg_enabled"):SetInt(0)
+end
 end)
+
+--end )
 
 hook.Add("Think","SCGG_Weapon_ServerRagdoll_Think",function() 
 if GetConVar("scgg_enabled"):GetInt() >= 2 then
@@ -165,12 +179,14 @@ cvars.AddChangeCallback( "scgg_enabled", function( convar_name, value_old, value
 		if GetConVar("scgg_weapon_vaporize"):GetInt() <= 0 then
 		GetConVar("scgg_weapon_vaporize"):SetInt(1)
 		end
-	elseif GetConVar("scgg_enabled"):GetInt() == 1 then
+	end
+	if GetConVar("scgg_enabled"):GetInt() == 1 then
 		game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 		if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
 		GetConVar("scgg_weapon_vaporize"):SetInt(0)
 		end
-	elseif GetConVar("scgg_enabled"):GetInt() <= 0 and game.GetGlobalState("super_phys_gun") != GLOBAL_DEAD then
+	end
+	if GetConVar("scgg_enabled"):GetInt() <= 0 and game.GetGlobalState("super_phys_gun") != GLOBAL_DEAD then
 		game.SetGlobalState( "super_phys_gun", GLOBAL_OFF )
 		if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
 		GetConVar("scgg_weapon_vaporize"):SetInt(0)
