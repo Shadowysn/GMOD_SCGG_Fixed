@@ -15,7 +15,6 @@ MatWorld:SetInt("$spriterendermode",5)
 ENT.RenderGroup 	= RENDERGROUP_TRANSLUCENT
 
 function ENT:Initialize()
-if !IsValid(self) then return end
 Zap:SetInt("$spriterendermode",5)
 ZapWorld:SetInt("$spriterendermode",5)
 Mat:SetInt("$spriterendermode",5)
@@ -43,6 +42,7 @@ function ENT:Draw()
 		if IsValid(Owner:GetActiveWeapon()) then
 		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
 		end
+		if !IsValid(self) then return end
 		
 		local attachmentID=vm:LookupAttachment("muzzle")
 		local attachment = vm:GetAttachment(attachmentID)
@@ -65,6 +65,7 @@ function ENT:Draw()
 		if !IsValid(vm) then return end
 		if !Owner:Alive() then return end
 		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
+		if !IsValid(self) then return end
 		
 		local attachmentID=vm:LookupAttachment("core")
 		local attachment = vm:GetAttachment(attachmentID)

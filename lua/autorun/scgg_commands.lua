@@ -2,47 +2,51 @@
 
 if !ConVarExists("scgg_style") then	
    CreateConVar("scgg_style", '0', (FCVAR_GAMEDLL), "to change if the weapon is styled like Half-Life 2 or Garry's Mod.", true, true)
-end
+end--1
 
 if !ConVarExists("scgg_light") then	
    CreateConVar("scgg_light", '0', (FCVAR_GAMEDLL), "to change if the weapon emits a light.", true, true)
-end
+end--2
 
 if !ConVarExists("scgg_muzzle_flash") then	
    CreateConVar("scgg_muzzle_flash", '1', (FCVAR_GAMEDLL), "to change if the weapon emits a light when attacking.", true, true)
-end
+end--3
 
 if !ConVarExists("scgg_zap") then	
    CreateConVar("scgg_zap", '1', (FCVAR_GAMEDLL), "to toggle victims being electrocuted.", true, true)
-end
+end--4
 
 if !ConVarExists("scgg_allow_others") then	
-   CreateConVar("scgg_allow_others", '1', (FCVAR_GAMEDLL), "to allow weapon interaction of other objects, including addons. (WILL have a chance to cause bugs.)", true, true)
-end
+   CreateConVar("scgg_allow_others", '0', (FCVAR_GAMEDLL), "to allow weapon interaction of other objects, including addons. (WILL have a chance to cause bugs.)", true, true)
+end--5
 
 if !ConVarExists("scgg_zap_sound") then	
    CreateConVar("scgg_zap_sound", '0', (FCVAR_GAMEDLL), "to toggle electrocuted victims emitting sound.", true, true)
-end
+end--6
 
 if !ConVarExists("scgg_equip_sound") then	
    CreateConVar("scgg_equip_sound", '0', (FCVAR_GAMEDLL), "to toggle sound emitted when deploying weapon.", true, true)
-end
+end--7
 
 if !ConVarExists("scgg_no_effects") then	
    CreateConVar("scgg_no_effects", '0', (FCVAR_GAMEDLL), "to toggle visual effects.", true, true)
-end
+end--8
 
 if !ConVarExists("scgg_enabled") then	
    CreateConVar("scgg_enabled", '1', (FCVAR_GAMEDLL), "to toggle weapon availability. 0 = any super-charged gravity gun will revert to normal. 1 = Enable, don't do anything else. 2 = Enable, alter various settings.", true, true)
-end
+end--9
 
 if !ConVarExists("scgg_weapon_vaporize") then	
    CreateConVar("scgg_weapon_vaporize", '0', (FCVAR_GAMEDLL), "to toggle map-wide dropped weapon vaporization.", true, true)
-end
+end--10
+
+if !ConVarExists("scgg_keep_armor") then	
+   CreateConVar("scgg_keep_armor", '0', (FCVAR_GAMEDLL), "to keep armor after weapon disable. 0 = remove all armor. 1 = lower to 100. 2 = keep armor.", true, true)
+end--11
 
 if !ConVarExists("scgg_friendly_fire") then	
-   CreateConVar("scgg_friendly_fire", '1', (FCVAR_GAMEDLL), "to toggle weapon damage against friendly NPCs.", true, true)
-end
+   CreateConVar("scgg_friendly_fire", '1', (FCVAR_GAMEDLL), "to toggle direct weapon interaction against friendly NPCs.", true, true)
+end--12
 
 --if SERVER then
 --function TheFunction(client, command, arguments, ply)
@@ -143,7 +147,7 @@ if game.GetGlobalState( "super_phys_gun") == GLOBAL_ON and GetConVar("scgg_enabl
 	end--]]
 	for _,foundply in pairs(player.GetAll()) do
 		for _,weap in pairs( foundply:GetWeapons() ) do
-			if weap:GetClass() == "weapon_physcannon" then--or weap:GetClass() == "weapon_superphyscannon" then
+			if foundply:Alive() and weap:GetClass() == "weapon_physcannon" then--or weap:GetClass() == "weapon_superphyscannon" then
 				if !foundply:HasWeapon("weapon_superphyscannon") then
 				foundply:Give("weapon_superphyscannon")
 				end
@@ -161,7 +165,7 @@ end)
 
 --end )
 
-hook.Add("Think","SCGG_Weapon_ServerRagdoll_Think",function() 
+--[[hook.Add("Think","SCGG_Weapon_ServerRagdoll_Think",function() 
 if GetConVar("scgg_enabled"):GetInt() >= 2 then
 	for _,npc in pairs(ents.GetAll()) do
 		if npc:IsNPC() then
@@ -171,7 +175,7 @@ if GetConVar("scgg_enabled"):GetInt() >= 2 then
 		end
 	end
 end
-end)
+end)--]]
 
 cvars.AddChangeCallback( "scgg_enabled", function( convar_name, value_old, value_new )
 	if GetConVar("scgg_enabled"):GetInt() >= 2 then
@@ -186,10 +190,32 @@ cvars.AddChangeCallback( "scgg_enabled", function( convar_name, value_old, value
 		GetConVar("scgg_weapon_vaporize"):SetInt(0)
 		end
 	end
-	if GetConVar("scgg_enabled"):GetInt() <= 0 and game.GetGlobalState("super_phys_gun") != GLOBAL_DEAD then
+	if GetConVar("scgg_enabled"):GetInt() <= 0 then
 		game.SetGlobalState( "super_phys_gun", GLOBAL_OFF )
 		if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
 		GetConVar("scgg_weapon_vaporize"):SetInt(0)
+		end
+		for _,ply in pairs(player.GetAll()) do
+			local getcvar = GetConVar("scgg_keep_armor"):GetInt()
+			if getcvar <= 1 and ply:IsValid() and ply:Alive() and ply:Armor() >= 1 then
+				local armorval_0 = ply:Armor()+1
+				local armor_countdown = ply:Armor()
+				if getcvar == 1 and ply:Armor() <= 100 then return end
+				timer.Create( "SCGG_Armor_Lower", 0.01, armorval_0/2, function()
+					if (ply:Armor() % 2 == 0) then
+					armor_countdown = armor_countdown-2
+					else
+					armor_countdown = armor_countdown-1
+					end
+					if getcvar <= 0 and ply:Armor() <= 0 
+					or getcvar == 1 and ply:Armor() <= 100
+					then 
+					timer.Remove("SCGG_Armor_Lower") 
+					return 
+					end
+					ply:SetArmor( armor_countdown )
+				end )
+			end
 		end
 	end
 end, "SCGG_Disable_GlobalState" )
@@ -214,25 +240,49 @@ panel:ControlHelp("Half-Life 2")
 panel:AddControl("Label", {Text = "Credits:"})
 panel:ControlHelp("Î¤yler Blu  - Original Super Gravity Gun")
 panel:ControlHelp("ErrolLiamP - Fixing / Porting and Additions")
-HL2Options.Options["#Default"]={scgg_style="0", scgg_light="0", scgg_muzzle_flash="1", scgg_zap="1", scgg_no_effects="0"}
+HL2Options.Options["#Default"]={scgg_enabled="1", scgg_style="0", scgg_friendly_fire="1", scgg_weapon_vaporize="0", scgg_allow_others="0", scgg_keep_armor="0", scgg_light="0", scgg_muzzle_flash="1", scgg_zap="1", scgg_zap_sound="0", scgg_no_effects="0", scgg_equip_sound="0"}
 panel:AddControl("ComboBox",HL2Options)
-panel:AddControl("Slider",{Label = "Behavior",min = 0,max = 1,Command = "scgg_style"})
+panel:AddControl("Slider",{Label = "Weapon Status",min = 0,max = 2,Command = "scgg_enabled"})--1
+panel:ControlHelp("0 = The weapon will be disabled")
+panel:ControlHelp("1 = The weapon will be enabled")
+panel:ControlHelp("2 = The weapon will be enabled, with other changes to the map")
+panel:AddControl("Slider",{Label = "Behavior",min = 0,max = 1,Command = "scgg_style"})--2
 --panel:ControlHelp("")
 panel:ControlHelp("0 = Half-Life 2 Styled - Slower and Weaker")
 panel:ControlHelp("1 = Garry's Mod Styled - Faster and Stronger")
-panel:AddControl("Slider",{Label = "Light Settings",min = 0,max = 1,Command = "scgg_light"})
+panel:AddControl("Slider",{Label = "Friendly Fire (NPC)",min = 0,max = 1,Command = "scgg_friendly_fire"})--3
+panel:ControlHelp("0 = Friendly NPCs will not be directly targeted")
+panel:ControlHelp("1 = Friendly NPCs will be directly targeted")
+panel:AddControl("Slider",{Label = "Weapon Vaporization",min = 0,max = 1,Command = "scgg_weapon_vaporize"})--4
+panel:ControlHelp("0 = Disabled")
+panel:ControlHelp("1 = Dropped weapons will be vaporized map-wide")
+panel:AddControl("Slider",{Label = "Foreign Interaction",min = 0,max = 1,Command = "scgg_allow_others"})--5
+panel:ControlHelp("0 = The weapon will not interact with foreign objects")
+panel:ControlHelp("1 = The weapon will interact with foreign objects")
+panel:AddControl("Label", {Text = "Foreign Interaction can cause bugs! Use at your own risk."})
+panel:AddControl("Slider",{Label = "Armor Drain",min = 0,max = 2,Command = "scgg_keep_armor"})--6
+panel:ControlHelp("0 = All armor will be depleted on weapon disable")
+panel:ControlHelp("1 = Armor will be depleted to 100% on weapon disable")
+panel:ControlHelp("2 = Armor will not be depleted")
+panel:AddControl("Slider",{Label = "Light Settings",min = 0,max = 1,Command = "scgg_light"})--7
 panel:ControlHelp("0 = The weapon will not emit a light")
 panel:ControlHelp("1 = The weapon will emit a light")
-panel:AddControl("Slider",{Label = "Muzzle Flash Settings",min = 0,max = 1,Command = "scgg_muzzle_flash"})
+panel:AddControl("Slider",{Label = "Muzzle Flash Settings",min = 0,max = 1,Command = "scgg_muzzle_flash"})--8
 panel:ControlHelp("0 = The weapon will not emit a light")
 panel:ControlHelp("1 = The weapon will emit a light")
-panel:AddControl("Slider",{Label = "Electrocute Victims",min = 0,max = 1,Command = "scgg_zap"})
+panel:AddControl("Slider",{Label = "Electrocute Victims",min = 0,max = 1,Command = "scgg_zap"})--9
 panel:ControlHelp("0 = The victim will not be electrocuted")
 panel:ControlHelp("1 = The victim will be electrocuted")
-panel:AddControl("Slider",{Label = "Visual Effects",min = 0,max = 1,Command = "scgg_no_effects"})
+panel:AddControl("Slider",{Label = "Electrocuted Sounds",min = 0,max = 1,Command = "scgg_zap_sound"})--10
+panel:ControlHelp("0 = Electrocuted victims will not emit sounds")
+panel:ControlHelp("1 = Electrocuted victims will emit sounds")
+panel:AddControl("Slider",{Label = "Visual Effects",min = 0,max = 1,Command = "scgg_no_effects"})--11
 panel:ControlHelp("0 = Visual Effects enabled")
 panel:ControlHelp("1 = Visual Effects disabled")
 panel:ControlHelp("(Holster and Deploy weapon to take effect.)")
+panel:AddControl("Slider",{Label = "Equipping Sound",min = 0,max = 1,Command = "scgg_equip_sound"})--12
+panel:ControlHelp("0 = The weapon will not emit a charge sound after deploying")
+panel:ControlHelp("1 = The weapon will emit a charge sound after deploying")
 end
 
 function HL2AddOption()

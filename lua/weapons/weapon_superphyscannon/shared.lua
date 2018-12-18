@@ -1,6 +1,7 @@
 SWEP.Spawnable			= true
 SWEP.AdminSpawnable		= true
 SWEP.ViewModel			= "models/weapons/errolliamp/c_superphyscannon.mdl"
+--SWEP.ViewModel			= "models/weapons/c_physcannon.mdl"
 --SWEP.ViewModel			= "models/weapons/c_superphyscannon.mdl"
 SWEP.WorldModel		= "models/weapons/errolliamp/w_superphyscannon.mdl"
 --SWEP.WorldModel		= "models/weapons/w_physics.mdl"
@@ -21,7 +22,8 @@ SWEP.MaxMass			= 15000
 SWEP.HL2MaxMass			= 5500
 SWEP.MaxPuntRange		= 5000
 SWEP.HL2MaxPuntRange	= 550
-SWEP.MaxPickupRange		= 850
+SWEP.MaxPickupRange		= 8050
+SWEP.HL2MaxPickupRange	= 850
 SWEP.MaxTargetHealth	= 125
 SWEP.Distance			= 55 -- 35
 	
@@ -53,17 +55,25 @@ function SWEP:Initialize()
 		self:SetWeaponHoldType( self.HoldType )
 		self:SetSkin(1)
 		self.Fade = true
+		self.Fading = false
 		self.RagdollRemoved = false
 		self.CoreAllowRemove = true
 		self.GlowAllowRemove = true
 		self.MuzzleAllowRemove = true
 		self.HPCollideG = COLLISION_GROUP_NONE
-		if SERVER then
-			util.AddNetworkString( "PlayerKilledNPC" )
-			util.AddNetworkString( "PlayerKilledByPlayer" )
-			util.AddNetworkString( "SCGG_Open_Claws" )
-		end
+		--if SERVER then
+			--util.AddNetworkString( "PlayerKilledNPC" )
+			--util.AddNetworkString( "PlayerKilledByPlayer" )
+			--util.AddNetworkString( "SCGG_Open_Claws" )
+		--end
 	end
+	
+--[[function SWEP:OpenClaws()
+	local ViewModel = self.Owner:GetViewModel()
+	if ViewModel then
+		ViewModel:SetPoseParameter("active", 1)
+	end
+end--]]
 	
 function SWEP:OwnerChanged()
 		self:SetSkin(1)
@@ -72,7 +82,7 @@ function SWEP:OwnerChanged()
 			self.HP = nil
 		end
 	end
-
+	
 function SWEP:Think()
 if GetConVar("scgg_style"):GetInt() <= 0 then
 	self.SwayScale 	= 3
@@ -115,13 +125,33 @@ end
 			self.Fade = false
 			self.Fading = true
 			self.Weapon:EmitSound("Weapon_Physgun.Off", 75, 100, 1)
+			self.FadeCore = ents.Create("PhyscannonFade")
+			timer.Create("SCGG_FadeCore_Position", 0.10, 0, function()
+			if !IsValid(self.FadeCore) then 
+			timer.Remove("SCGG_FadeCore_Position")
+			return 
+			end
+			self.FadeCore:SetPos( self.Owner:GetShootPos() )
+			end )
+			self.FadeCore:Spawn()
+			self.FadeCore:SetParent(self.Owner)
+			self.FadeCore:SetOwner(self.Owner)
 			
-			timer.Simple( 0.70, function()
+			--[[timer.Simple( 0.40, function()
+			if !IsValid(self) and !IsValid(self.Weapon) then return end
+			self.Weapon:SendWeaponAnim(ACT_VM_HOLSTER)
+			end )--]]
+			timer.Simple( 0.90, function()
 			if !IsValid(self) then return end
+			if IsValid(self.FadeCore) then
+				self.FadeCore:Remove()
+			end
 			if !self.Owner:HasWeapon( "weapon_physcannon" ) then
 				self.Owner:Give("weapon_physcannon")
 			end
+			if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
 			self.Owner:SelectWeapon("weapon_physcannon")
+			end
 			self:Remove()
 			end )
 		end
@@ -166,7 +196,8 @@ end
 		local trace = self.Owner:GetEyeTrace()
 		local tgt = trace.Entity
 		
-		if math.random(  6,  98 ) == 16 and !self.TP and !self.Owner:KeyDown(IN_ATTACK2) and !self.Owner:KeyDown(IN_ATTACK) then
+		if math.random(  6,  98 ) == 16 and !self.TP and !self.Owner:KeyDown(IN_ATTACK2) and !self.Owner:KeyDown(IN_ATTACK) 
+		and !IsValid(self.Zap1) and !IsValid(self.Zap2) and !IsValid(self.Zap3) then
 			if self.Fading == true then return end
 			self:ZapEffect()
 		end
@@ -240,7 +271,7 @@ end
 				
 				timer.Simple( 0.4, 
 				function()
-					if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
+					if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
 					self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
 					end
 				end )
@@ -248,11 +279,11 @@ end
 				self:CoreEffect()
 				self:RemoveGlow()
 				
-				if self.TP then
+				if IsValid(self.TP) then
 					self.TP:Remove()
 					self.TP = nil
 				end
-				if self.HP then
+				if IsValid(self.HP) then
 					self.HP = nil
 				end
 				
@@ -284,12 +315,15 @@ function SWEP:ZapEffect()
 			local zap_math = table.Random( { 1, 2, 3 } )
 			if zap_math == 1 then
 				self.Zap =  ents.Create("PhyscannonZap1")
+				self.Zap1 = self.Zap
 				else
 			if zap_math == 2 then
 				self.Zap =  ents.Create("PhyscannonZap2")
+				self.Zap2 = self.Zap
 				else
 			if zap_math == 3 then
 				self.Zap =  ents.Create("PhyscannonZap3")
+				self.Zap3 = self.Zap
 				else
 			end
 			end
@@ -404,24 +438,6 @@ function SWEP:FriendlyNPC( npc )
 end
 end
 	
---[[function SWEP:OpenClaws() -- Does not function
-	--self.Weapon:EmitSound("Weapon_MegaPhysCannon.Charge")
-	if CLIENT then
-		local function BeginOpen()
-			local Open = GetViewEntity():LookupSequence("ProngsOpen")
-			GetViewEntity():SetSequence(Open)
-			net.Receive( "SCGG_Open_Claws", BeginOpen )
-		end
-	end
-	if SERVER then
-		net.Start( "SCGG_Open_Claws" )
-		net.Send( self.Owner )
-	end
-	--local Open = self.Owner:GetViewModel():LookupSequence("ProngsOpen")
-	--self.Owner:GetViewModel():SetSequence(Open)
-	--local Open = self.Weapon:LookupSequence("ProngsShut")
-end--]]
-	
 function SWEP:PrimaryAttack()
 	if self.Fading == true then return end
 		if GetConVar("scgg_style"):GetInt() <= 0 then
@@ -434,7 +450,7 @@ function SWEP:PrimaryAttack()
 		local vm = self.Owner:GetViewModel()
 		timer.Create( "attack_idle" .. self:EntIndex(), 0.4, 1, function()
 		if !IsValid( self.Weapon ) then return end
-		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
+		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
 			self.Weapon:SendWeaponAnim( ACT_VM_IDLE )
 		end
 		end)
@@ -459,6 +475,7 @@ function SWEP:PrimaryAttack()
 		end
 		
 		if tgt:IsNPC() and !self:AllowedClass() and !self:NotAllowedClass() or tgt:IsPlayer() then
+			local ragdoll = nil
 			if (SERVER) then
 				if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
 				--if (tgt:IsPlayer() and server_settings.Int( "sbox_plpldamage" ) == 1) then
@@ -487,42 +504,45 @@ function SWEP:PrimaryAttack()
 						--tgt:Fire( "AddOutput", "health 0", 0 )
 						tgt:SetHealth( 0 )
 					end
+					if tgt:GetClass() != "npc_antlion_worker" then
 					local dmg = DamageInfo()
 					dmg:SetDamage( tgt:Health() )
-					dmg:SetDamageForce( Vector( 0, 0, 0 ) )
+					dmg:SetDamageForce( self.Owner:GetShootPos() )
 					dmg:SetDamageType( DMG_SHOCK )
 					dmg:SetAttacker( self.Owner )
 					dmg:SetInflictor( self.Weapon )
 					dmg:SetReportedPosition( self.Owner:GetShootPos() )
 					tgt:TakeDamageInfo( dmg )
-					
+					end
 					
 					for _,rag in pairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-						if rag:IsRagdoll() and rag:GetModel() == tgt:GetModel() and rag:GetCreationTime() == CurTime() and self.RagdollRemoved == false then
+						if rag:IsRagdoll() and rag:GetModel() == tgt:GetModel() and rag:GetCreationTime() == CurTime() and self.RagdollRemoved != true then
 							self.RagdollRemoved = true
-							rag:Remove()
+							--rag:Remove()
+							ragdoll = rag
 						end
 					end
 					
 					self.RagdollRemoved = false
-					--[[net.Start( "PlayerKilledNPC" )
-					net.WriteString( tgt:GetClass() )
-					net.WriteString( "weapon_superphyscannon" )
-					net.WriteEntity( self.Owner )
-					net.Broadcast()--]]
 				end
 				
-				local ragdoll = ents.Create( "prop_ragdoll" )
-				ragdoll:SetPos( tgt:GetPos())
-				ragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
-				ragdoll:SetModel( tgt:GetModel() )
-				ragdoll:SetSkin( tgt:GetSkin() )
-				ragdoll:SetColor( tgt:GetColor() )
-				ragdoll:SetName( pickedupragdoll )
+				if !IsValid(ragdoll) then
+				local newragdoll = ents.Create( "prop_ragdoll" )
+				newragdoll:SetPos( tgt:GetPos())
+				newragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
+				newragdoll:SetModel( tgt:GetModel() )
+				newragdoll:SetSkin( tgt:GetSkin() )
+				newragdoll:SetColor( tgt:GetColor() )
+				newragdoll:SetName( pickedupragdoll )
 				for k,v in pairs(tgt:GetBodyGroups()) do
-					ragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
+					newragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
 				end
-				ragdoll:SetMaterial( tgt:GetMaterial() )
+				newragdoll:SetMaterial( tgt:GetMaterial() )
+				newragdoll:SetKeyValue("spawnflags",8192)
+				newragdoll:Spawn()
+				ragdoll = newragdoll
+				self.SCGGNewRagdollFormed = true
+				end
 				
 				-- Just in case the NPC is scripted like VJ Base
 				if tgt:GetActiveWeapon():IsValid() then
@@ -600,11 +620,19 @@ function SWEP:PrimaryAttack()
 					ragdoll:Fire("FadeAndRemove","",120)
 				--end
 				
+				if self.SCGGNewRagdollFormed == true then
 				cleanup.Add (self.Owner, "props", ragdoll);
 				undo.Create ("Ragdoll");
 				undo.AddEntity (ragdoll);
 				undo.SetPlayer (self.Owner);
 				undo.Finish();
+				
+				net.Start( "PlayerKilledNPC" )
+				net.WriteString( tgt:GetClass() )
+				net.WriteString( "weapon_superphyscannon" )
+				net.WriteEntity( self.Owner )
+				net.Broadcast()
+				end
 				
 				if tgt:IsPlayer() then
 					--tgt:KillSilent()
@@ -637,7 +665,6 @@ function SWEP:PrimaryAttack()
 				
 				self.Owner:AddFrags(1)
 				
-				ragdoll:Spawn()
 				if GetConVar("scgg_zap"):GetInt() >= 1 then
 				ragdoll:Fire("StartRagdollBoogie","",0) end
 				--ragdoll:Fire("SetBodygroup","15",0)
@@ -650,15 +677,16 @@ function SWEP:PrimaryAttack()
 				--end )
 				
 				RagdollVisual(ragdoll, 1)
-				
 				for i = 1, ragdoll:GetPhysicsObjectCount() do
 					local bone = ragdoll:GetPhysicsObjectNum(i)
 					
 					if bone and bone.IsValid and bone:IsValid() then
 						local bonepos, boneang = tgt:GetBonePosition(ragdoll:TranslatePhysBoneToBone(i))
 						
+						if self.SCGGNewRagdollFormed == true then
 						bone:SetPos(bonepos)
 						bone:SetAngles(boneang)
+						end
 						timer.Simple( 0.01, 
 						function()
 							if IsValid(bone) then
@@ -676,6 +704,9 @@ function SWEP:PrimaryAttack()
 			
 			end
 			
+			local ragdoll = ragdoll
+			ragdoll = nil
+			self.SCGGNewRagdollFormed = nil
 			self:Visual()
 			--self:DoSparks()
 		end
@@ -718,10 +749,36 @@ function SWEP:PrimaryAttack()
 				end
 				
 				end 
+			if GetConVar("scgg_style"):GetInt() >= 1 then
+			tgt:SetPhysicsAttacker(self.Owner, 9)
+			else
 			tgt:SetPhysicsAttacker(self.Owner, 4)
+			end
 			tgt:Fire("physdamagescale","99999",0)
 			
 			end
+			
+			local function SCGG_Collide_Damage( entity, data )
+			if ( data.OurOldVelocity:Length() > 250 ) then 
+				local dmginfo = DamageInfo();
+				dmginfo:SetDamage( data.OurOldVelocity:Length()/76 );
+				dmginfo:SetDamageForce( self.Owner:GetPos() )
+				dmginfo:SetReportedPosition( self.Owner:GetPos() )
+				dmginfo:SetAttacker( self.Owner );
+				dmginfo:SetInflictor( self.Owner:GetWeapon( "weapon_superphyscannon" ) );
+				entity:TakeDamageInfo(dmginfo)
+			end
+			--local callbackget = self:GetCallbacks("PhysicsCollide")
+			--print("me is here")
+			end
+			if tgt:GetClass() == "npc_manhack" then
+			local callback = tgt:AddCallback("PhysicsCollide", SCGG_Collide_Damage)
+			--[[timer.Simple( 3.5, function() 
+				if IsValid(tgt) then
+					tgt:RemoveCallback("PhysicsCollide", callback )
+				end
+			end)--]]
+		end
 		end
 		
 		if tgt:IsRagdoll() then
@@ -736,7 +793,11 @@ function SWEP:PrimaryAttack()
 						tgt:GetPhysicsObject():SetPhysicsAttacker(self.Owner, 4)
 					end
 				end--]]
+				if GetConVar("scgg_style"):GetInt() >= 1 then
+				tgt:SetPhysicsAttacker(self.Owner, 9)
+				else
 				tgt:SetPhysicsAttacker(self.Owner, 4)
+				end
 				
 				if GetConVar("scgg_zap"):GetInt() >= 1 then
 				tgt:Fire("StartRagdollBoogie","",0) end
@@ -807,9 +868,34 @@ function SWEP:DropAndShoot()
 		else
 		self.HP:SetCollisionGroup( self.HPCollideG )
 		end
+		if GetConVar("scgg_style"):GetInt() >= 1 then
+		self.HP:SetPhysicsAttacker(self.Owner, 9)
+		else
 		self.HP:SetPhysicsAttacker(self.Owner, 4)
-		self.HP:SetNWBool("launched_by_scgg", true)
+		end
+		--self.HP:SetNWBool("launched_by_scgg", true)
 		self.Owner:SimulateGravGunDrop( self.HP )
+		local function SCGG_Collide_Damage( entity, data )
+			if ( data.OurOldVelocity:Length() > 250 ) then 
+				local dmginfo = DamageInfo();
+				dmginfo:SetDamage( data.OurOldVelocity:Length()/62 );
+				dmginfo:SetDamageForce( self.Owner:GetPos() )
+				dmginfo:SetReportedPosition( self.Owner:GetPos() )
+				dmginfo:SetAttacker( self.Owner );
+				dmginfo:SetInflictor( self.Owner:GetWeapon( "weapon_superphyscannon" ) );
+				entity:TakeDamageInfo(dmginfo)
+			end
+			--local callbackget = self:GetCallbacks("PhysicsCollide")
+			--print("me is here")
+		end
+		if self.HP:GetClass() == "npc_manhack" then
+		local callback = self.HP:AddCallback("PhysicsCollide", SCGG_Collide_Damage)
+		timer.Simple( 3.5, function() 
+			if IsValid(self.HP) then
+				self.HP:RemoveCallback("PhysicsCollide", callback )
+			end
+		end)
+		end
 		
 		self.Secondary.Automatic = true
 		if GetConVar("scgg_style"):GetInt() >= 1 then
@@ -955,17 +1041,21 @@ function SWEP:SecondaryAttack()
 		if !tgt or !tgt:IsValid() then
 			return
 		end
-		if ( GetConVar("scgg_style"):GetInt() <= 0 ) 
+		local getstyle = GetConVar("scgg_style"):GetInt()
+		if ( getstyle <= 0 ) 
 		and 
 		( ( tgt:IsNPC() or tgt:IsPlayer() ) and tgt:Health() > self.MaxTargetHealth ) 
 		or ( (tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and !util.IsValidRagdoll(tgt:GetModel()) and !util.IsValidProp(tgt:GetModel()) ) 
 		--or (!tgt:IsNPC() and !tgt:IsPlayer() and !tgt:IsRagdoll()) and !util.IsValidProp(tgt:GetModel())
+		--or ( tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and ( getstyle <= 0 and tgt:GetMass() > self.HL2MaxMass or getstyle >= 1 and tgt:GetMass() > self.MaxMass ) -- Non-functioning
 		then return end
 		
 		if !self:NotAllowedClass() and !self:AllowedClass() then
 			if (SERVER) then
 				local Dist = (tgt:GetPos()-self.Owner:GetPos()):Length()
-				if Dist >= self.MaxPickupRange then return end
+				if GetConVar("scgg_style"):GetInt() <= 0 and Dist >= self.HL2MaxPickupRange
+				or GetConVar("scgg_style"):GetInt() >= 1 and Dist >= self.MaxPickupRange 
+				then return end
 				if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
 				--if tgt:IsPlayer() and server_settings.Int( "sbox_plpldamage" ) == 1 then
 					--self.Weapon:EmitSound("Weapon_PhysCannon.TooHeavy")
@@ -988,6 +1078,7 @@ function SWEP:SecondaryAttack()
 						--tgt:Fire( "AddOutput", "health 0", 0 )
 						tgt:SetHealth( 0 )
 					end
+					if tgt:GetClass() != "npc_antlion_worker" then
 					local dmg = DamageInfo()
 					dmg:SetDamage( tgt:Health() )
 					dmg:SetDamageForce( Vector( 0, 0, 0 ) )
@@ -996,35 +1087,37 @@ function SWEP:SecondaryAttack()
 					dmg:SetInflictor( self.Weapon )
 					dmg:SetReportedPosition( self.Owner:GetShootPos() )
 					tgt:TakeDamageInfo( dmg )
+					end
 					
 					for _,rag in pairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-						if rag:IsRagdoll() and rag:GetModel() == tgt:GetModel() and rag:GetCreationTime() == CurTime() and self.RagdollRemoved == false then
+						if rag:IsRagdoll() and rag:GetModel() == tgt:GetModel() and rag:GetCreationTime() == CurTime() and self.RagdollRemoved != true then
 							self.RagdollRemoved = true
-							rag:Remove()
+							--rag:Remove()
+							ragdoll = rag
 						end
 					end
 					
 					self.RagdollRemoved = false
-					
-					--[[net.Start( "PlayerKilledNPC" )
-					net.WriteString( tgt:GetClass() )
-					net.WriteString( "weapon_superphyscannon" )
-					net.WriteEntity( self.Owner )
-					net.Broadcast()--]]
 					end
 					
-					if tgt:IsNPC() and tgt:Health() >= 1 then return end
-					local ragdoll = ents.Create( "prop_ragdoll" )
-					ragdoll:SetPos( tgt:GetPos())
-					ragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
-					ragdoll:SetModel( tgt:GetModel() )
-					ragdoll:SetSkin( tgt:GetSkin() )
-					ragdoll:SetColor( tgt:GetColor() )
+					if tgt:Health() >= 1 then return end
+					if !IsValid(ragdoll) then
+					local newragdoll = ents.Create( "prop_ragdoll" )
+					newragdoll:SetPos( tgt:GetPos())
+					newragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
+					newragdoll:SetModel( tgt:GetModel() )
+					newragdoll:SetSkin( tgt:GetSkin() )
+					newragdoll:SetColor( tgt:GetColor() )
 					for k,v in pairs(tgt:GetBodyGroups()) do
-						ragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
+						newragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
 					end
-					ragdoll:SetMaterial( tgt:GetMaterial() )
-					ragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS_TRIGGER)
+					newragdoll:SetMaterial( tgt:GetMaterial() )
+					newragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS_TRIGGER)
+					newragdoll:SetKeyValue("spawnflags",8192)
+					newragdoll:Spawn()
+					ragdoll = newragdoll
+					self.SCGGNewRagdollFormed = true
+					end
 					
 					if tgt:GetActiveWeapon():IsValid() then
 						local wep = trace.Entity:GetActiveWeapon()
@@ -1068,12 +1161,20 @@ function SWEP:SecondaryAttack()
 					end
 							end
 					
+					if self.SCGGNewRagdollFormed == true then
 					cleanup.Add (self.Owner, "props", ragdoll);
 					undo.Create ("Ragdoll");
 					undo.AddEntity (ragdoll);
 					undo.SetPlayer (self.Owner);
 					undo.SetCustomUndoText( "Undone Ragdoll" )
 					undo.Finish();
+					
+					net.Start( "PlayerKilledNPC" )
+					net.WriteString( tgt:GetClass() )
+					net.WriteString( "weapon_superphyscannon" )
+					net.WriteEntity( self.Owner )
+					net.Broadcast()
+					end
 					
 					if tgt:IsPlayer() then
 						--tgt:KillSilent()
@@ -1097,7 +1198,6 @@ function SWEP:SecondaryAttack()
 						tgt:Fire("Kill","",0)
 					end
 					
-					ragdoll:Spawn()
 					--ragdoll:Fire("SetBodygroup","15",0)
 					self.HP = ragdoll
 					
@@ -1109,6 +1209,7 @@ function SWEP:SecondaryAttack()
 					self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 					self.Owner:SetAnimation( PLAYER_ATTACK1 )
 					
+					if self.SCGGNewRagdollFormed == true then
 					for i = 1, ragdoll:GetPhysicsObjectCount() do
 					local bone = ragdoll:GetPhysicsObjectNum(i)
 					
@@ -1119,6 +1220,9 @@ function SWEP:SecondaryAttack()
 							bone:SetAngles(boneang)
 						end
 					end
+					end
+					ragdoll = nil
+					self.SCGGNewRagdollFormed = nil
 					timer.Simple( 0.01, 
 				function() 
 						self:Pickup() 
@@ -1147,7 +1251,8 @@ function SWEP:SecondaryAttack()
 				end end
 				
 				if tgt:IsRagdoll() or self:AllowedClass() and tgt:GetPhysicsObject():IsMoveable() and ( !constraint.HasConstraints( tgt ) ) then
-					if Dist < self.MaxPickupRange then
+					if GetConVar("scgg_style"):GetInt() <= 0 and Dist < self.HL2MaxPickupRange 
+					or GetConVar("scgg_style"):GetInt() >= 1 and Dist < self.MaxPickupRange then
 						self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 						self.Owner:SetAnimation( PLAYER_ATTACK1 )
 						self.HP = tgt
@@ -1189,14 +1294,16 @@ function SWEP:Pickup()
 		
 		timer.Simple( 0.4,
 	function()
+			if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
 			self.Weapon:SendWeaponAnim(ACT_VM_RELOAD)
+			end
 		end )
 		
 		local trace = self.Owner:GetEyeTrace()
 		
 		self.HP:Fire("DisablePhyscannonPickup","",0)
 		
-		if self.HP:GetClass() == "prop_combine_ball" then
+		if self.HP:GetClass()=="prop_combine_ball" or self.HP:GetClass()=="npc_manhack" then
 		self.TP = ents.Create("prop_dynamic")
 		else
 		self.TP = ents.Create("prop_physics")
@@ -1302,7 +1409,7 @@ function SWEP:Drop()
 		timer.Simple( 0.4,
 		function()
 			if !IsValid( self.Weapon ) then return end
-			if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
+			if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
 				self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
 			end
 		end )
@@ -1379,7 +1486,9 @@ function SWEP:Visual()
 			
 			timer.Simple( 0.12,
 		function() 
+				if IsValid(self.Muzzle) then
 				self:RemoveMuzzle()
+				end
 			end )
 		end
 		
@@ -1428,6 +1537,8 @@ if !IsValid(ent) then return end
 	end
 
 function SWEP:Deploy()
+		self:SetNWBool("claw_open", true)
+		self:SetNWBool("claw_move", true)
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 5 )
 		self.Weapon:SetNextSecondaryFire( CurTime() + 5 )
 		self:CoreEffect()
@@ -1441,7 +1552,7 @@ function SWEP:Deploy()
 		local vm = self.Owner:GetViewModel()
 		timer.Create( "deploy_idle" .. self:EntIndex(), vm:SequenceDuration(), 1, function()
 		if !IsValid( self.Weapon ) then return true end
-		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
+		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
 			self.Weapon:SendWeaponAnim( ACT_VM_IDLE )
 		end
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.01 )

@@ -9,10 +9,9 @@ Main:SetInt("$spriterendermode",5)
 ENT.RenderGroup 	= RENDERGROUP_TRANSLUCENT --RENDERGROUP_BOTH
 
 function ENT:Initialize()
-if IsValid(self) then
 Mat:SetInt("$spriterendermode",5)
 Main:SetInt("$spriterendermode",9)
-end
+MatWorld:SetInt("$spriterendermode",5)
 end
 
 function ENT:Think()
@@ -22,7 +21,7 @@ end
 function ENT:Draw()
 	local scale = math.Rand( 8, 10 )
 	--local scale2 = math.Rand( 25, 27 )
-	local scale2 = math.Rand( 18, 22 )
+	local scale2 = math.Rand( 20, 24 )
 	local scale3 = math.Rand( 3, 4 )
 	local scale7 = math.Rand( 12, 14 )
 	if !IsValid(self) then return end

@@ -14,12 +14,11 @@ Main:SetInt("$spriterendermode",5)
 ENT.RenderGroup 	= RENDERGROUP_TRANSLUCENT
 
 function ENT:Initialize()
-if IsValid(self) then
 Mat:SetInt("$spriterendermode",5)
 Zap:SetInt("$spriterendermode",5)
 ZapWorld:SetInt("$spriterendermode",5)
 Main:SetInt("$spriterendermode",9)
-end
+MatWorld:SetInt("$spriterendermode",5)
 end
 
 function ENT:Think()
