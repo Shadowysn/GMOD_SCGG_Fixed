@@ -61,19 +61,43 @@ function SWEP:Initialize()
 		self.GlowAllowRemove = true
 		self.MuzzleAllowRemove = true
 		self.HPCollideG = COLLISION_GROUP_NONE
-		--if SERVER then
+		if SERVER then
 			--util.AddNetworkString( "PlayerKilledNPC" )
 			--util.AddNetworkString( "PlayerKilledByPlayer" )
-			--util.AddNetworkString( "SCGG_Open_Claws" )
-		--end
+			util.AddNetworkString( "SCGG_Deploy_DisableGrav" )
+			util.AddNetworkString( "SCGG_Holster_EnableGrav" )
+		end
+		if CLIENT then
+			net.Receive( "SCGG_Deploy_DisableGrav", function() 
+				--print("yeahclient")
+				--self.Owner:GetWeapon("weapon_physcannon"):SetNextClientThink(-1)
+			end )
+			net.Receive( "SCGG_Holster_EnableGrav", function() 
+				--print("yeahclient2")
+				--self.Owner:GetWeapon("weapon_physcannon"):SetNextClientThink(0.1)
+			end )
+		end
 	end
 	
---[[function SWEP:OpenClaws()
+function SWEP:OpenClaws( boolean )
 	local ViewModel = self.Owner:GetViewModel()
-	if ViewModel then
+	if ViewModel and ViewModel:GetPoseParameter("active") <= 0 then
 		ViewModel:SetPoseParameter("active", 1)
+		if boolean == true then
+			self.Weapon:EmitSound("Weapon_PhysCannon.OpenClaws")
+		end
 	end
-end--]]
+end
+
+function SWEP:CloseClaws( boolean )
+	local ViewModel = self.Owner:GetViewModel()
+	if ViewModel and ViewModel:GetPoseParameter("active") >= 1 then
+		ViewModel:SetPoseParameter("active", 0)
+		if boolean == true then
+			self.Weapon:EmitSound("Weapon_PhysCannon.CloseClaws")
+		end
+	end
+end
 	
 function SWEP:OwnerChanged()
 		self:SetSkin(1)
@@ -125,7 +149,7 @@ end
 			self.Fade = false
 			self.Fading = true
 			self.Weapon:EmitSound("Weapon_Physgun.Off", 75, 100, 1)
-			self.FadeCore = ents.Create("PhyscannonFade")
+			--[[self.FadeCore = ents.Create("PhyscannonFade")
 			timer.Create("SCGG_FadeCore_Position", 0.10, 0, function()
 			if !IsValid(self.FadeCore) then 
 			timer.Remove("SCGG_FadeCore_Position")
@@ -135,7 +159,7 @@ end
 			end )
 			self.FadeCore:Spawn()
 			self.FadeCore:SetParent(self.Owner)
-			self.FadeCore:SetOwner(self.Owner)
+			self.FadeCore:SetOwner(self.Owner)--]]
 			
 			--[[timer.Simple( 0.40, function()
 			if !IsValid(self) and !IsValid(self.Weapon) then return end
@@ -143,9 +167,9 @@ end
 			end )--]]
 			timer.Simple( 0.90, function()
 			if !IsValid(self) then return end
-			if IsValid(self.FadeCore) then
+			--[[if IsValid(self.FadeCore) then
 				self.FadeCore:Remove()
-			end
+			end--]]
 			if !self.Owner:HasWeapon( "weapon_physcannon" ) then
 				self.Owner:Give("weapon_physcannon")
 			end
@@ -197,7 +221,8 @@ end
 		local tgt = trace.Entity
 		
 		if math.random(  6,  98 ) == 16 and !self.TP and !self.Owner:KeyDown(IN_ATTACK2) and !self.Owner:KeyDown(IN_ATTACK) 
-		and !IsValid(self.Zap1) and !IsValid(self.Zap2) and !IsValid(self.Zap3) then
+		--and !IsValid(self.Zap1) and !IsValid(self.Zap2) and !IsValid(self.Zap3) 
+		then
 			if self.Fading == true then return end
 			self:ZapEffect()
 		end
@@ -249,7 +274,7 @@ end
 			if self.HP and self.HP != NULL and IsValid(self.HP) then
 				if (SERVER) then
 				if !IsValid(self.HP) then self.HP = nil self.Drop() return end
-					HPrad = self.HP:BoundingRadius()
+					HPrad = self.HP:BoundingRadius()/1.5
 					if !IsValid(self.Owner) then return end
 					if !IsValid(self.TP) then return end
 					self.TP:SetPos(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.Distance+HPrad))
@@ -312,22 +337,19 @@ function SWEP:ZapEffect()
 		if SERVER then
 			if GetConVar("scgg_no_effects"):GetInt() >= 1 then return end
 			--if GetConVar("scgg_style"):GetInt() <= 1 then return end
+			if IsValid(self.Zap1) and IsValid(self.Zap2) and IsValid(self.Zap3) then return end
 			local zap_math = table.Random( { 1, 2, 3 } )
-			if zap_math == 1 then
+			if zap_math == 1 and !IsValid(self.Zap1) then
 				self.Zap =  ents.Create("PhyscannonZap1")
 				self.Zap1 = self.Zap
-				else
-			if zap_math == 2 then
+			elseif zap_math == 2 and !IsValid(self.Zap2) then
 				self.Zap =  ents.Create("PhyscannonZap2")
 				self.Zap2 = self.Zap
-				else
-			if zap_math == 3 then
+			elseif zap_math == 3 and !IsValid(self.Zap3) then
 				self.Zap =  ents.Create("PhyscannonZap3")
 				self.Zap3 = self.Zap
-				else
 			end
-			end
-			end
+			if !IsValid(self.Zap1) and !IsValid(self.Zap2) and !IsValid(self.Zap3) then return end
 			self.Zap:SetPos( self.Owner:GetShootPos() )
 			self.Zap:Spawn()
 			self.Zap:SetParent(self.Owner)
@@ -356,11 +378,11 @@ function SWEP:NotAllowedClass()
 function SWEP:AllowedClass()
 		local trace = self.Owner:GetEyeTrace()
 		local class = trace.Entity:GetClass()
-		--[[for _,child in pairs(trace.Entity:GetChildren()) do
+		for _,child in pairs(trace.Entity:GetChildren()) do
 			if child:GetClass() == "env_entity_dissolver" then
 				return false
 			end
-		end--]] -- Not yet fully tested
+		end -- Not yet fully tested
 		--if trace.Entity:GetMoveType() == MOVETYPE_VPHYSICS then
 		if class == "npc_manhack"
 			or class == "npc_turret_floor"
@@ -410,10 +432,11 @@ function SWEP:AllowedClass()
 			or class == "func_physbox"
 			or class == "grenade_helicopter"
 			or class == "prop_combine_ball"
-			or class == "prop_wheel"
+			or class == "gmod_wheel"
 			or class == "prop_vehicle_prisoner_pod"
 			or class == "prop_physics_respawnable"
 			or class == "prop_physics_multiplayer"
+			or class == "prop_physics_override"
 			or class == "prop_physics"
 			or class == "prop_dynamic"
 			or class == "func_brush"	then
@@ -436,6 +459,52 @@ function SWEP:FriendlyNPC( npc )
 		return false
 	end
 end
+end
+
+function SWEP:AllowedCenterPhysicsClass()
+	local trace = self.Owner:GetEyeTrace()
+	local class = trace.Entity:GetClass()
+	if !IsValid(trace.Entity) then return false end
+	if class == "gmod_wheel"
+	or class == "prop_vehicle_prisoner_pod"
+	or class == "prop_physics_respawnable"
+	or class == "prop_physics_multiplayer"
+	or class == "prop_physics"
+	or class == "prop_physics_override"
+	or class == "prop_dynamic"
+	or class == "gmod_cameraprop"
+	or class == "helicopter_chunk"
+	or class == "func_physbox"
+	or class == "grenade_helicopter"
+	or class == "func_brush"
+	or class == "npc_manhack"
+	or class == "npc_turret_floor"
+	or class == "npc_sscanner"
+	or class == "npc_cscanner"
+	or class == "npc_clawscanner"
+	or class == "npc_rollermine"
+	or class == "npc_grenade_frag" 
+	or class == "item_ammo_357"
+	or class == "item_ammo_ar2_altfire"
+	or class == "item_ammo_crossbow"
+	or class == "item_ammo_pistol"
+	or class == "item_ammo_smg1"
+	or class == "item_ammo_smg1_grenade"
+	or class == "item_battery"
+	or class == "item_box_buckshot"
+	or class == "item_healthvial"
+	or class == "item_healthkit"
+	or class == "item_rpg_round"
+	or class == "item_ammo_ar2"
+	or class == "item_item_crate"
+	or trace.Entity:IsWeapon()
+	or class == "weapon_striderbuster"
+	or class == "combine_mine"
+	or class == "megaphyscannon" then
+	return true
+	else
+	return false
+	end
 end
 	
 function SWEP:PrimaryAttack()
@@ -1308,7 +1377,11 @@ function SWEP:Pickup()
 		else
 		self.TP = ents.Create("prop_physics")
 		end
+		if self:AllowedCenterPhysicsClass() then
+		self.TP:SetPos(self.HP:LocalToWorld(self.HP:OBBCenter())) -- Doesn't affect much
+		else
 		self.TP:SetPos(self.HP:GetPhysicsObject():GetMassCenter())
+		end
 		if !IsValid(self.HP) then self.HP = nil return end
 		if IsValid(self.HP:GetPhysicsObject()) then
 		self.TP:SetPos(self.HP:GetPhysicsObject():GetPos())
@@ -1537,12 +1610,15 @@ if !IsValid(ent) then return end
 	end
 
 function SWEP:Deploy()
-		self:SetNWBool("claw_open", true)
-		self:SetNWBool("claw_move", true)
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 5 )
 		self.Weapon:SetNextSecondaryFire( CurTime() + 5 )
+		if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
+			--print("yeah")
+			net.Start("SCGG_Deploy_DisableGrav")
+			net.Send( self.Owner )
+		end
 		self:CoreEffect()
-		--self:OpenClaws()
+		self:OpenClaws( false )
 		if GetConVar("scgg_style"):GetInt() <= 0 then
 		self.Weapon:SendWeaponAnim( ACT_VM_DRAW )
 		if ( GetConVar("scgg_equip_sound"):GetInt() >= 1 ) and not ( GetConVar("scgg_enabled"):GetInt() <= 0 ) then
@@ -1559,11 +1635,19 @@ function SWEP:Deploy()
 		self.Weapon:SetNextSecondaryFire( CurTime() + 0.01 )
 		end)
 		return true
-	end
+end
 
 function SWEP:Holster()
 timer.Destroy("deploy_idle")
 timer.Destroy("attack_idle")
+if SERVER then
+	if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
+		local ply = self.Owner
+		--print("yeah2")
+		net.Start("SCGG_Holster_EnableGrav")
+		net.Send( ply )
+	end
+end
 self.Weapon:StopSound(HoldSound)
 self.Weapon:Drop()
 self.HP = nil
