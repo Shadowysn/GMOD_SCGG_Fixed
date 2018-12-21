@@ -25,6 +25,7 @@ Version 1:
 
 * No more insta-killing things with higher-than-125 health. Instead it damages them for 125 health.
 * Pick up weapons! :)
+* Weapon will use the entity for it's dropped state. Glow effects!
 * Collision group will be stored. (In a nutshell, it means that a non-collidable barrel will still be non collidable after dropping.)
 * Able to kill manhacks by punting them into a wall now.
 * Gravity gun pickup simulation. (Combine mines will now be friendly after you drop them, etc.)
