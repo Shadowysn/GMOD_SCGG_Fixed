@@ -366,6 +366,7 @@ function SWEP:NotAllowedClass()
 			--or class == "npc_barnacle"
 			or class == "npc_antliongrub"
 			or class == "npc_turret_ceiling"
+			or class == "npc_sniper"
 			or class == "npc_combine_camera"
 			or class == "npc_combinegunship"
 			or class == "npc_bullseye" then
@@ -405,7 +406,7 @@ function SWEP:AllowedClass()
 			or class == "item_rpg_round"
 			or class == "item_ammo_ar2"
 			or class == "item_item_crate"
-			or trace.Entity:IsWeapon()
+			or trace.Entity:IsWeapon() and !IsValid(trace.Entity:GetOwner())
 			--[[or class == "weapon_357"
 			or class == "weapon_annabelle"
 			or class == "weapon_alyxgun"
@@ -552,7 +553,7 @@ function SWEP:PrimaryAttack()
 					--self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
 					--return
 				--end
-				if ( GetConVar("scgg_style"):GetInt() <= 0 and tgt:Health() > self.MaxTargetHealth ) or ( !util.IsValidRagdoll(tgt:GetModel()) ) then
+				if ( GetConVar("scgg_style"):GetInt() <= 0 and ( tgt:IsNPC() and tgt:Health() > self.MaxTargetHealth or tgt:IsPlayer() and tgt:Health()+tgt:Armor() > self.MaxTargetHealth ) ) or ( !util.IsValidRagdoll(tgt:GetModel()) ) then
 					local dmginfo = DamageInfo()
 					dmginfo:SetDamage( self.MaxTargetHealth )
 					dmginfo:SetAttacker( self.Owner )
@@ -747,6 +748,11 @@ function SWEP:PrimaryAttack()
 						--ragdoll:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 					--end
 				--end )
+				if GetConVar("scgg_style"):GetInt() >= 1 then
+					ragdoll:SetPhysicsAttacker(self.Owner, 9)
+				else
+					ragdoll:SetPhysicsAttacker(self.Owner, 4)
+				end
 				
 				RagdollVisual(ragdoll, 1)
 				for i = 1, ragdoll:GetPhysicsObjectCount() do
@@ -1388,6 +1394,7 @@ function SWEP:Pickup()
 		
 		self.HP:Fire("DisablePhyscannonPickup","",0)
 		
+		if !IsValid(self.HP:GetPhysicsObject()) then return end
 		if self.HP:GetClass()=="prop_combine_ball" or self.HP:GetClass()=="npc_manhack" then
 		self.TP = ents.Create("prop_dynamic")
 		else
@@ -1788,4 +1795,3 @@ function SWEP:RemoveGlow()
 		self.Glow:Remove()
 		self.Glow = nil
 	end
-	
