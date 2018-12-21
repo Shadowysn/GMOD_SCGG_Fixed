@@ -18,6 +18,7 @@ Version 1:
 * World-wide dropped weapon vaporization.
 * Enable/disable sounds from electrocuted ragdolls.
 * HL2 style updated to feature range limitations.
+
 ==
 
 * No more insta-killing things with higher-than-125 health. Instead it damages them for 125 health.
