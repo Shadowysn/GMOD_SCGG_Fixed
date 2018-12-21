@@ -7,7 +7,9 @@ Update Log from version 1 onwards:
 Version 1:
 * Effects mostly fixed.
 * Now able to pick up combine balls.
-* Moar commands: [
+* Moar commands:
+
+==
 * Allow ability to interact with entities, such as those from other addons.
 * Enability. Downgrading works properly in HL2:EP1's Direct Intervention.
 * Equipping Sound.
@@ -16,8 +18,7 @@ Version 1:
 * World-wide dropped weapon vaporization.
 * Enable/disable sounds from electrocuted ragdolls.
 * HL2 style updated to feature range limitations.
-
-]
+==
 
 * No more insta-killing things with higher-than-125 health. Instead it damages them for 125 health.
 * Pick up weapons! :)
