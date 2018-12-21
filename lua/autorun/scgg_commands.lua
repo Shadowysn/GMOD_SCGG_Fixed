@@ -48,6 +48,8 @@ if !ConVarExists("scgg_friendly_fire") then
    CreateConVar("scgg_friendly_fire", '1', (FCVAR_GAMEDLL), "to toggle direct weapon interaction against friendly NPCs.", true, true)
 end--12
 
+--game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
+
 --if SERVER then
 --function TheFunction(client, command, arguments, ply)
     	--ply:Give("weapon_superphyscannon")
@@ -64,7 +66,6 @@ if GetConVar("scgg_weapon_vaporize"):GetInt() >= 2 then
 		local superphys = "weapon_superphyscannon"
 		if owner:HasWeapon(superphys) == true then
 			owner:StripWeapon(superphys)
-			print("heybab")
 		end
 	end
 end
@@ -177,20 +178,31 @@ if GetConVar("scgg_enabled"):GetInt() >= 2 then
 end
 end)--]]
 
+cvars.AddChangeCallback( "physcannon_mega_enabled", function( convar_name, value_old, value_new )
+	local megacvar = GetConVar("physcannon_mega_enabled"):GetInt()
+	if megacvar >= 1 then
+		GetConVar("scgg_enabled"):SetInt(2)
+	end
+	if megacvar <= 0 then
+		GetConVar("scgg_enabled"):SetInt(0)
+	end
+end, "SCGG_MegaCvar_Support" )
+
 cvars.AddChangeCallback( "scgg_enabled", function( convar_name, value_old, value_new )
-	if GetConVar("scgg_enabled"):GetInt() >= 2 then
+	local enablecvar = GetConVar("scgg_enabled"):GetInt()
+	if enablecvar >= 2 then
 		game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 		if GetConVar("scgg_weapon_vaporize"):GetInt() <= 0 then
 		GetConVar("scgg_weapon_vaporize"):SetInt(1)
 		end
 	end
-	if GetConVar("scgg_enabled"):GetInt() == 1 then
+	if enablecvar == 1 then
 		game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 		if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
 		GetConVar("scgg_weapon_vaporize"):SetInt(0)
 		end
 	end
-	if GetConVar("scgg_enabled"):GetInt() <= 0 then
+	if enablecvar <= 0 then
 		game.SetGlobalState( "super_phys_gun", GLOBAL_OFF )
 		if GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
 		GetConVar("scgg_weapon_vaporize"):SetInt(0)

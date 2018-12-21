@@ -367,7 +367,8 @@ function SWEP:NotAllowedClass()
 			or class == "npc_antliongrub"
 			or class == "npc_turret_ceiling"
 			or class == "npc_combine_camera"
-			or class == "npc_combinegunship" then
+			or class == "npc_combinegunship"
+			or class == "npc_bullseye" then
 			--or class == "prop_vehicle_prisoner_pod"	then
 		return true
 		else
@@ -696,11 +697,13 @@ function SWEP:PrimaryAttack()
 				undo.SetPlayer (self.Owner);
 				undo.Finish();
 				
+				if !tgt:IsPlayer() then
 				net.Start( "PlayerKilledNPC" )
 				net.WriteString( tgt:GetClass() )
 				net.WriteString( "weapon_superphyscannon" )
 				net.WriteEntity( self.Owner )
 				net.Broadcast()
+				end
 				end
 				
 				if tgt:IsPlayer() then
@@ -919,12 +922,12 @@ function SWEP:PrimaryAttack()
 			end
 		end
 		
-		if self:AllowedClass() then
-		local dinfo = DamageInfo();
-		dinfo:SetDamage( 1 );
-		dinfo:SetAttacker( self.Owner );
-		dinfo:SetInflictor( self );
-		tgt:TakeDamageInfo(dinfo)
+		if self:AllowedClass() and !tgt:IsRagdoll() then
+		local dmginfo = DamageInfo();
+		dmginfo:SetDamage( 1 );
+		dmginfo:SetAttacker( self.Owner );
+		dmginfo:SetInflictor( self );
+		tgt:TakeDamageInfo(dmginfo)
 		end
 		
 	end
@@ -1114,8 +1117,8 @@ function SWEP:SecondaryAttack()
 		if ( getstyle <= 0 ) 
 		and 
 		( ( tgt:IsNPC() or tgt:IsPlayer() ) and tgt:Health() > self.MaxTargetHealth ) 
+		or ( tgt:IsNPC() and tgt:GetClass() == "npc_bullseye" )
 		or ( (tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and !util.IsValidRagdoll(tgt:GetModel()) and !util.IsValidProp(tgt:GetModel()) ) 
-		--or (!tgt:IsNPC() and !tgt:IsPlayer() and !tgt:IsRagdoll()) and !util.IsValidProp(tgt:GetModel())
 		--or ( tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and ( getstyle <= 0 and tgt:GetMass() > self.HL2MaxMass or getstyle >= 1 and tgt:GetMass() > self.MaxMass ) -- Non-functioning
 		then return end
 		
@@ -1134,6 +1137,18 @@ function SWEP:SecondaryAttack()
 				if tgt:IsNPC() and ( GetConVar("scgg_friendly_fire"):GetInt()>=1 or !self:FriendlyNPC(tgt) ) or tgt:IsPlayer() then
 					
 					if tgt:IsPlayer() then
+						if tgt:Health() >= 1 then
+							--tgt:Fire( "AddOutput", "health 0", 0 )
+							tgt:SetHealth( 0 )
+						end
+					local dmg = DamageInfo()
+					dmg:SetDamage( tgt:Health() )
+					dmg:SetDamageForce( self.Owner:GetShootPos() )
+					dmg:SetDamageType( DMG_SHOCK )
+					dmg:SetAttacker( self.Owner )
+					dmg:SetInflictor( self.Weapon )
+					dmg:SetReportedPosition( self.Owner:GetShootPos() )
+					tgt:TakeDamageInfo( dmg )
 					--[[net.Start( "PlayerKilledByPlayer" )
 					net.WriteEntity( tgt )
 					net.WriteString( "weapon_superphyscannon" )
@@ -1144,13 +1159,12 @@ function SWEP:SecondaryAttack()
 					tgt:SetShouldServerRagdoll( true )
 					end
 					if tgt:Health() >= 1 then
-						--tgt:Fire( "AddOutput", "health 0", 0 )
 						tgt:SetHealth( 0 )
 					end
 					if tgt:GetClass() != "npc_antlion_worker" then
 					local dmg = DamageInfo()
 					dmg:SetDamage( tgt:Health() )
-					dmg:SetDamageForce( Vector( 0, 0, 0 ) )
+					dmg:SetDamageForce( self.Owner:GetShootPos() )
 					dmg:SetDamageType( DMG_SHOCK )
 					dmg:SetAttacker( self.Owner )
 					dmg:SetInflictor( self.Weapon )
@@ -1238,11 +1252,13 @@ function SWEP:SecondaryAttack()
 					undo.SetCustomUndoText( "Undone Ragdoll" )
 					undo.Finish();
 					
+					if !tgt:IsPlayer() then
 					net.Start( "PlayerKilledNPC" )
 					net.WriteString( tgt:GetClass() )
 					net.WriteString( "weapon_superphyscannon" )
 					net.WriteEntity( self.Owner )
 					net.Broadcast()
+					end
 					end
 					
 					if tgt:IsPlayer() then
@@ -1252,7 +1268,7 @@ function SWEP:SecondaryAttack()
 						--self.Owner:AddFrags(1)
 						local dmg = DamageInfo()
 						dmg:SetDamage( tgt:Health() )
-						dmg:SetDamageForce( Vector( 0, 0, 0 ) )
+						dmg:SetDamageForce( self.Owner:GetShootPos() )
 						dmg:SetDamageType( DMG_SHOCK )
 						dmg:SetAttacker( self.Owner )
 						dmg:SetInflictor( self.Weapon )
@@ -1612,11 +1628,11 @@ if !IsValid(ent) then return end
 function SWEP:Deploy()
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 5 )
 		self.Weapon:SetNextSecondaryFire( CurTime() + 5 )
-		if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
+		--[[if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
 			--print("yeah")
 			net.Start("SCGG_Deploy_DisableGrav")
 			net.Send( self.Owner )
-		end
+		end--]]
 		self:CoreEffect()
 		self:OpenClaws( false )
 		if GetConVar("scgg_style"):GetInt() <= 0 then
