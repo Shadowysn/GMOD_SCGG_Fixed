@@ -21,11 +21,11 @@ function ENT:Think()
 		Owner:SetNWBool(	"Camera",			false)
 	end
 	
-	if !Owner:Alive() then
+	if !Owner:Alive() or Owner:GetActiveWeapon():GetClass() != "weapon_superphyscannon" then
 		self.Entity:Remove()
-		for k,v in pairs(player.GetAll()) do
+		--[[for k,v in pairs(player.GetAll()) do
 			v:ConCommand("stopsounds") --there is a better way to stop the holdingsound, but i cant figure it out somehow...
-		end
+		end--]]
 	return end
 end
 

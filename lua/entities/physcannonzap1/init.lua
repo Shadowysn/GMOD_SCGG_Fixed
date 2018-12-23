@@ -9,7 +9,7 @@ function ENT:Initialize()
 	self.Entity:DrawShadow( false )
 	self.Entity:SetSolid( SOLID_NONE )
 	self.Entity:EmitSound("Weapon_MegaPhysCannon.ChargeZap")
-	timer.Simple( 0.1, function() if IsValid(self.Entity) then self.Entity:Remove() end end )
+	timer.Simple( math.Rand(0.1,0.3), function() if IsValid(self.Entity) then self.Entity:Remove() end end )
 	
 end
 

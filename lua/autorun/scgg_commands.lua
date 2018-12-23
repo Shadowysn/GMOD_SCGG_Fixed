@@ -21,7 +21,7 @@ if !ConVarExists("scgg_allow_others") then
 end--5
 
 if !ConVarExists("scgg_zap_sound") then	
-   CreateConVar("scgg_zap_sound", '0', (FCVAR_GAMEDLL), "to toggle electrocuted victims emitting sound.", true, true)
+   CreateConVar("scgg_zap_sound", '1', (FCVAR_GAMEDLL), "to toggle electrocuted victims emitting sound.", true, true)
 end--6
 
 if !ConVarExists("scgg_equip_sound") then	
@@ -252,7 +252,7 @@ panel:ControlHelp("Half-Life 2")
 panel:AddControl("Label", {Text = "Credits:"})
 panel:ControlHelp("Î¤yler Blu  - Original Super Gravity Gun")
 panel:ControlHelp("ErrolLiamP - Fixing / Porting and Additions")
-HL2Options.Options["#Default"]={scgg_enabled="1", scgg_style="0", scgg_friendly_fire="1", scgg_weapon_vaporize="0", scgg_allow_others="0", scgg_keep_armor="0", scgg_light="0", scgg_muzzle_flash="1", scgg_zap="1", scgg_zap_sound="0", scgg_no_effects="0", scgg_equip_sound="0"}
+HL2Options.Options["#Default"]={scgg_enabled="1", scgg_style="0", scgg_friendly_fire="1", scgg_weapon_vaporize="0", scgg_allow_others="0", scgg_keep_armor="0", scgg_light="0", scgg_muzzle_flash="1", scgg_zap="1", scgg_zap_sound="1", scgg_no_effects="0", scgg_equip_sound="0"}
 panel:AddControl("ComboBox",HL2Options)
 panel:AddControl("Slider",{Label = "Weapon Status",min = 0,max = 2,Command = "scgg_enabled"})--1
 panel:ControlHelp("0 = The weapon will be disabled")

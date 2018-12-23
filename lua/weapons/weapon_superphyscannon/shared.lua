@@ -54,6 +54,7 @@ util.PrecacheModel("models/props_junk/PopCan01a.mdl")
 function SWEP:Initialize()
 		self:SetWeaponHoldType( self.HoldType )
 		self:SetSkin(1)
+		self.ClawOpenState = false
 		self.Fade = true
 		self.Fading = false
 		self.RagdollRemoved = false
@@ -62,12 +63,12 @@ function SWEP:Initialize()
 		self.MuzzleAllowRemove = true
 		self.HPCollideG = COLLISION_GROUP_NONE
 		if SERVER then
-			--util.AddNetworkString( "PlayerKilledNPC" )
+			util.AddNetworkString( "PlayerKilledNPC" )
 			--util.AddNetworkString( "PlayerKilledByPlayer" )
-			util.AddNetworkString( "SCGG_Deploy_DisableGrav" )
-			util.AddNetworkString( "SCGG_Holster_EnableGrav" )
+			--util.AddNetworkString( "SCGG_Deploy_DisableGrav" )
+			--util.AddNetworkString( "SCGG_Holster_EnableGrav" )
 		end
-		if CLIENT then
+		--[[if CLIENT then
 			net.Receive( "SCGG_Deploy_DisableGrav", function() 
 				--print("yeahclient")
 				--self.Owner:GetWeapon("weapon_physcannon"):SetNextClientThink(-1)
@@ -76,13 +77,21 @@ function SWEP:Initialize()
 				--print("yeahclient2")
 				--self.Owner:GetWeapon("weapon_physcannon"):SetNextClientThink(0.1)
 			end )
-		end
+		end--]]
 	end
 	
 function SWEP:OpenClaws( boolean )
 	local ViewModel = self.Owner:GetViewModel()
-	if ViewModel and ViewModel:GetPoseParameter("active") <= 0 then
-		ViewModel:SetPoseParameter("active", 1)
+	--if ViewModel and ViewModel:GetPoseParameter("active") <= 0 then
+	if ViewModel and self.ClawOpenState == false then
+		--ViewModel:SetPoseParameter("active", 1)
+		ViewModel:AddCallback("BuildBonePositions", function( entity, bone ) 
+			local prong_a = ViewModel:LookupBone("Prong_A")
+			if prong_a then
+				ViewModel:ManipulateBoneScale( prong_a, 190 )
+				ViewModel:ManipulateBoneAngles( prong_a, Angle(0,0,0) )
+			end
+		end)
 		if boolean == true then
 			self.Weapon:EmitSound("Weapon_PhysCannon.OpenClaws")
 		end
@@ -91,8 +100,10 @@ end
 
 function SWEP:CloseClaws( boolean )
 	local ViewModel = self.Owner:GetViewModel()
-	if ViewModel and ViewModel:GetPoseParameter("active") >= 1 then
-		ViewModel:SetPoseParameter("active", 0)
+	--if ViewModel and ViewModel:GetPoseParameter("active") >= 1 then
+	if ViewModel and self.ClawOpenState == true then
+		--ViewModel:SetPoseParameter("active", 0)
+		
 		if boolean == true then
 			self.Weapon:EmitSound("Weapon_PhysCannon.CloseClaws")
 		end
@@ -231,6 +242,18 @@ end
 			if self.Fading == true then return end
 			self:GlowEffect()
 			self:RemoveCore()
+			if IsValid(self.Zap1) then
+				self.Zap1:Remove()
+				self.Zap1 = nil
+			end
+			if IsValid(self.Zap2) then
+				self.Zap2:Remove()
+				self.Zap2 = nil
+			end
+			if IsValid(self.Zap3) then
+				self.Zap3:Remove()
+				self.Zap3 = nil
+			end
 		elseif self.Owner:KeyReleased(IN_ATTACK2) and !self.TP then
 			if self.Fading == true then return end
 			self:RemoveGlow()
@@ -277,7 +300,21 @@ end
 					HPrad = self.HP:BoundingRadius()/1.5
 					if !IsValid(self.Owner) then return end
 					if !IsValid(self.TP) then return end
-					self.TP:SetPos(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.Distance+HPrad))
+					local grabpos = self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.Distance+HPrad)
+					--local grabspeedpos = self.HP:GetPos()+( grabpos/5 )
+					--[[local grabspeedpos = self.HP:GetPos():Cross( grabpos )
+					local function FindTP( entity )
+						local grabpos_sphere = ents.FindInSphere( grabpos, 5 )
+						for _,ent in pairs(grabpos_sphere) do
+							if ent == entity then return true end
+						end
+						return false
+					end
+					if GetConVar("scgg_style"):GetInt() <= 0 and FindTP( self.TP ) == false then
+					self.TP:SetPos(grabspeedpos)
+					else--]]
+					self.TP:SetPos(grabpos)
+					--end
 					
 					self.TP:PointAtEntity(self.Owner)
 				--if self.HP:GetPhysicsObject() == nil then return end
@@ -657,7 +694,7 @@ function SWEP:PrimaryAttack()
 				end
 				
 			if GetConVar("scgg_zap"):GetInt() >= 1 then
-			local effect  	= EffectData()
+			--[[local effect  	= EffectData()
 			if !IsValid(ragdoll) then return end
 			effect:SetOrigin(ragdoll:GetPos())
 			effect:SetStart(ragdoll:GetPos())
@@ -666,8 +703,8 @@ function SWEP:PrimaryAttack()
 			util.Effect("teslaHitBoxes",effect)
 			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
 			ragdoll:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end
-			timer.Create( "zapper", 0.3, 16, function()
+			end--]]
+			--[[timer.Create( "zapper", 0.3, 16, function()
 			local effect2  	= EffectData()
 			if !IsValid(ragdoll) then return end
 			effect2:SetOrigin(ragdoll:GetPos())
@@ -679,7 +716,10 @@ function SWEP:PrimaryAttack()
 			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
 			ragdoll:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
 			end
-			end) end
+			end) --]]
+			ragdoll:SCGG_RagdollZapper()
+			--ragdoll:SetNWInt("scgg_zapper_timer", 16)
+			end
 	
 				--tgt:DropWeapon( tgt:GetActiveWeapon() )
 				--if tgt:HasWeapon()
@@ -698,13 +738,13 @@ function SWEP:PrimaryAttack()
 				undo.SetPlayer (self.Owner);
 				undo.Finish();
 				
-				if !tgt:IsPlayer() then
+				--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and tgt:IsValid() then
 				net.Start( "PlayerKilledNPC" )
 				net.WriteString( tgt:GetClass() )
-				net.WriteString( "weapon_superphyscannon" )
+				net.WriteString( self.Weapon:GetClass() )
 				net.WriteEntity( self.Owner )
 				net.Broadcast()
-				end
+				end--]]
 				end
 				
 				if tgt:IsPlayer() then
@@ -770,9 +810,9 @@ function SWEP:PrimaryAttack()
 							if IsValid(bone) then
 							if GetConVar("scgg_style"):GetInt() <= 0 then --Ragdoll Thrown
 							
-							bone:AddVelocity(self.Owner:GetAimVector()*13000/8) 
+							bone:AddVelocity(self.Owner:GetAimVector()*(13000/8))--/(ragdoll:GetPhysicsObject():GetMass()/200)) 
 							else
-							bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/8) 
+							bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/(ragdoll:GetPhysicsObject():GetMass()/200)) 
 							end
 							end
 						end )
@@ -811,8 +851,8 @@ function SWEP:PrimaryAttack()
 				tgt:SetOwner(self.Owner)
 				else
 				
-				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*1000000) --1000000
-				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*1000000, position )
+				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*1000000/(tgt:GetPhysicsObject():GetMass()/400)) --1000000
+				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*1000000/(tgt:GetPhysicsObject():GetMass()/400), position )
 				end
 				
 				else
@@ -822,8 +862,8 @@ function SWEP:PrimaryAttack()
 				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector(), position )
 				tgt:SetOwner(self.Owner)
 				else
-				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.PuntForce)
-				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.PuntForce, position )
+				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.PuntForce/8)
+				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.PuntForce/8, position )
 				end
 				
 				end 
@@ -882,7 +922,7 @@ function SWEP:PrimaryAttack()
 				RagdollVisual(tgt, 1)
 				
 			if GetConVar("scgg_zap"):GetInt() >= 1 then
-			local effect  	= EffectData()
+			--[[local effect  	= EffectData()
 			if !IsValid(tgt) then return end
 			effect:SetOrigin(tgt:GetPos())
 			effect:SetStart(tgt:GetPos())
@@ -891,8 +931,8 @@ function SWEP:PrimaryAttack()
 			util.Effect("teslaHitBoxes",effect)
 			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
 			tgt:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end
-			timer.Create( "zapper", 0.3, 16, function()
+			end--]]
+			--[[timer.Create( "zapper", 0.3, 16, function()
 			if IsValid(tgt) then
 			local effect2  	= EffectData()
 			effect2:SetOrigin(tgt:GetPos())
@@ -905,14 +945,16 @@ function SWEP:PrimaryAttack()
 			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
 			tgt:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
 			end
-			end) end
+			end) --]]
+			tgt:SCGG_RagdollZapper()
+			end
 				
 				for i = 1, tgt:GetPhysicsObjectCount() do
 					local bone = tgt:GetPhysicsObjectNum(i)
 					
 					if bone and bone.IsValid and bone:IsValid() then
 					if GetConVar("scgg_style"):GetInt() <= 0 then
-						bone:AddVelocity(self.Owner:GetAimVector()*10000/8) else
+						bone:AddVelocity(self.Owner:GetAimVector()*(10000/8)) else--/(tgt:GetPhysicsObject():GetMass()/200)) else
 						bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/8) 
 						end
 					end
@@ -1034,25 +1076,27 @@ function SWEP:DropAndShoot()
 				
 				if bone and bone.IsValid and bone:IsValid() then
 			if GetConVar("scgg_zap"):GetInt() >= 1 then
-			local effect  	= EffectData()
+			--[[local effect  	= EffectData()
 			if !IsValid(self.HP) then return end
 			effect:SetOrigin(self.HP:GetPos())
 			effect:SetStart(self.HP:GetPos())
 			effect:SetMagnitude(5)
 			effect:SetEntity(self.HP)
-			util.Effect("teslaHitBoxes",effect)
+			util.Effect("teslaHitBoxes",effect)--]]
 			--self.HP:EmitSound("Weapon_StunStick.Activate")
-			timer.Create( "zapper", 0.3, 16, function()
+			--[[timer.Create( "zapper", 0.3, 16, function()
 			util.Effect("teslaHitBoxes",effect)
 			if !IsValid(self.HP) then self.HP = nil return end
 			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
 			self.HP:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
 			end
-			end) end
+			end) --]]
+			self.HP:SCGG_RagdollZapper()
+			end
 					timer.Simple( 0.02, 
 				function()
 						if GetConVar("scgg_style"):GetInt() <= 0 then
-						bone:AddVelocity(self.Owner:GetAimVector()*20000/8) else
+						bone:AddVelocity(self.Owner:GetAimVector()*(20000/8)) else--/(self.HP:GetPhysicsObject():GetMass()/200)) else
 						bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/8) 
 						end
 					end )
@@ -1071,8 +1115,8 @@ function SWEP:DropAndShoot()
 					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*800000,position ) 
 					self.HP:SetOwner(self.Owner)
 					else
-					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*3500000) --3500000 --500*( self.HP:GetPhysicsObject():GetMass() ) )
-					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*3500000 ,position ) 
+					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*3500000/(self.HP:GetPhysicsObject():GetMass()/400)) --3500000 --500*( self.HP:GetPhysicsObject():GetMass() ) )
+					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*3500000/(self.HP:GetPhysicsObject():GetMass()/400) ,position ) 
 					end
 					
 					else
@@ -1258,13 +1302,13 @@ function SWEP:SecondaryAttack()
 					undo.SetCustomUndoText( "Undone Ragdoll" )
 					undo.Finish();
 					
-					if !tgt:IsPlayer() then
+					--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and tgt:IsValid() then
 					net.Start( "PlayerKilledNPC" )
 					net.WriteString( tgt:GetClass() )
-					net.WriteString( "weapon_superphyscannon" )
+					net.WriteString( self.Weapon:GetClass() )
 					net.WriteEntity( self.Owner )
 					net.Broadcast()
-					end
+					end--]]
 					end
 					
 					if tgt:IsPlayer() then
@@ -1467,7 +1511,7 @@ function SWEP:Drop()
 		if self.HP:IsRagdoll() then
 			RagdollVisual(self.HP, 1)
 					if GetConVar("scgg_zap"):GetInt() <= 1 then
-			local effect  	= EffectData()
+			--[[local effect  	= EffectData()
 			if !IsValid(self.HP) then return end
 			effect:SetOrigin(self.HP:GetPos())
 			effect:SetStart(self.HP:GetPos())
@@ -1476,16 +1520,19 @@ function SWEP:Drop()
 			util.Effect("teslaHitBoxes",effect)
 			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
 			self.HP:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end
-			timer.Create( "zapper", 0.3, 16, function()
+			end--]]
+			--[[timer.Create( "zapper", 0.3, 16, function()
 			util.Effect("teslaHitBoxes",effect)
 			if !IsValid(self.HP) then self.HP = nil return end
 			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
 			self.HP:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
 			end
-			end) end
+			end) --]]
+			self.HP:SCGG_RagdollZapper()
+			end
 			if GetConVar("scgg_zap"):GetInt() >= 1 then
-			self.HP:Fire("StartRagdollBoogie","",0) end
+			self.HP:Fire("StartRagdollBoogie","",0) 
+			end
 		end
 		
 		self.Secondary.Automatic = true
@@ -1631,6 +1678,45 @@ if !IsValid(ent) then return end
 			end
 		end
 	end
+	
+local entmeta = FindMetaTable( "Entity" )
+-- I think it's just the name that allowed for more than 1 ragdolls being electrocuted. Even so, the meta keeps it tidy.
+function entmeta:SCGG_RagdollZapper()
+	if GetConVar("scgg_zap"):GetInt() >= 1 then
+	local name = "scgg_zapper_"..math.random()
+	local ZapRepeats = 16
+	if self.SCGG_IsBeingZapped == true then timer.Adjust(self.SCGG_TimerName,0.3,ZapRepeats) return end
+	self.SCGG_IsBeingZapped = true
+	self.SCGG_TimerName = name
+	
+	local effect2  	= EffectData()
+	if !IsValid(self) then timer.Remove(name) return end
+	effect2:SetOrigin(self:GetPos())
+	effect2:SetStart(self:GetPos())
+	effect2:SetMagnitude(5)
+	effect2:SetEntity(self)
+	util.Effect("teslaHitBoxes",effect2)
+	if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
+		self:EmitSound("Weapon_StunStick.Activate", 75, math.Rand(99, 101), 0.1)
+	end
+	
+	timer.Create( name, 0.3, ZapRepeats, function()
+			--print(name, timer.RepsLeft(name))
+			local effect2  	= EffectData()
+			if !IsValid(self) then timer.Remove(name) return end
+			effect2:SetOrigin(self:GetPos())
+			effect2:SetStart(self:GetPos())
+			effect2:SetMagnitude(5)
+			effect2:SetEntity(self)
+			util.Effect("teslaHitBoxes",effect2)
+			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
+			self:EmitSound("Weapon_StunStick.Activate", 75, math.Rand(99, 101), 0.1)
+			end
+			if !IsValid(self) then timer.Remove(name) return end
+			if timer.RepsLeft(name) <= 0 then self.SCGG_TimerName = nil self.SCGG_IsBeingZapped = nil timer.Remove(name) return end
+	end)
+	end
+end
 
 function SWEP:Deploy()
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 5 )
@@ -1663,14 +1749,14 @@ end
 function SWEP:Holster()
 timer.Destroy("deploy_idle")
 timer.Destroy("attack_idle")
-if SERVER then
+--[[if SERVER then
 	if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
 		local ply = self.Owner
 		--print("yeah2")
 		net.Start("SCGG_Holster_EnableGrav")
 		net.Send( ply )
 	end
-end
+end--]]
 self.Weapon:StopSound(HoldSound)
 self.Weapon:Drop()
 self.HP = nil
