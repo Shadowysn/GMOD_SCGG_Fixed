@@ -6,6 +6,8 @@ Make sure to disable the other Super Gravity Gun addon from the workshop before 
 
 Update Log from version 1 onwards:
 
+{List may or may not be accurate.}
+
 Version 1:
 * Effects mostly fixed.
 * Now able to pick up combine balls.
@@ -30,4 +32,8 @@ Version 1:
 * Able to kill manhacks by punting them into a wall now.
 * Gravity gun pickup simulation. (Combine mines will now be friendly after you drop them, etc.)
 * Proper deaths for NPCs and Players.
-{List may or may not be accurate.}
+
+Version 2:
+
+* Electrocution effects on more than 1 ragdoll at a time! (Previously, a new ragdoll's effects will have overridden the previous ragdoll's effects)
+* Few minor changes.
