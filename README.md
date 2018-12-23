@@ -33,7 +33,7 @@ Version 1:
 * Gravity gun pickup simulation. (Combine mines will now be friendly after you drop them, etc.)
 * Proper deaths for NPCs and Players.
 
-Version 2:
+Version 1.1:
 
 * Electrocution effects on more than 1 ragdoll at a time! (Previously, a new ragdoll's effects will have overridden the previous ragdoll's effects)
 * Few minor changes.
