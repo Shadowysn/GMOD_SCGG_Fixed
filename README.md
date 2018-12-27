@@ -37,3 +37,7 @@ Version 1.1:
 
 * Electrocution effects on more than 1 ragdoll at a time! (Previously, a new ragdoll's effects will have overridden the previous ragdoll's effects)
 * Few minor changes.
+
+Version 1.8:
+* Proper claw animations! Closed, open or dynamic state. Applies to both viewmodel and worldmodel. (As with all new features, it may be buggy.)
+* Debris ragdolls/props can now be picked up. Previously they could not be detected.
