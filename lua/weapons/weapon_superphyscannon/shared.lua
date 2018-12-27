@@ -318,11 +318,13 @@ end
 		local trace = self.Owner:GetEyeTrace()
 		local tgt = trace.Entity
 		
+		if SERVER then
+		
 		if GetConVar("scgg_claw_mode"):GetInt() >= 2 then
 		local Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
 		if IsValid(tgt) and 
 		( ( (self:AllowedClass() and tgt:GetMoveType() == MOVETYPE_VPHYSICS and 
-		(tgt:GetPhysicsObject():IsValid() and (GetConVar("scgg_style"):GetInt() <= 0 and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass+1) or GetConVar("scgg_style"):GetInt() >= 1 and tgt:GetPhysicsObject():GetMass() < (self.MaxMass+1)) ) )
+		GetConVar("scgg_style"):GetInt() <= 0 and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) or GetConVar("scgg_style"):GetInt() >= 1 and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
 		or (tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) ) and tgt:Health() <= self.MaxTargetHealth) or tgt:IsPlayer() or tgt:IsRagdoll() )
 		and !self:NotAllowedClass() ) 
 		and
@@ -341,6 +343,8 @@ end
 			end )
 			end
 		end
+		end
+		
 		end
 		
 		if math.random(  6,  98 ) == 16 and !self.TP and !self.Owner:KeyDown(IN_ATTACK2) and !self.Owner:KeyDown(IN_ATTACK) 
@@ -1223,8 +1227,10 @@ function SWEP:DropAndShoot()
 					timer.Simple( 0.02, 
 				function()
 						if GetConVar("scgg_style"):GetInt() <= 0 then
+						if IsValid(bone) then
 						bone:AddVelocity(self.Owner:GetAimVector()*(20000/8)) else--/(self.HP:GetPhysicsObject():GetMass()/200)) else
 						bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/8) 
+						end
 						end
 					end )
 				end
@@ -1831,6 +1837,20 @@ function entmeta:SCGG_RagdollZapper()
 		self:EmitSound("Weapon_StunStick.Activate", 75, math.Rand(99, 101), 0.1)
 	end
 	
+	local function CollisionCheck( ent )
+		if !IsValid(ent) then return false end
+		local collision = ent:GetCollisionGroup()
+		if collision!=COLLISION_GROUP_WEAPON 
+		or collision!=COLLISION_GROUP_DEBRIS 
+		or collision!=COLLISION_GROUP_DEBRIS_TRIGGER 
+		or collision!=COLLISION_GROUP_WORLD 
+		then 
+		return true
+		else
+		return false
+		end 
+	end
+	
 	timer.Create( name, 0.3, ZapRepeats, function()
 			--print(name, timer.RepsLeft(name))
 			local effect2  	= EffectData()
@@ -1847,11 +1867,7 @@ function entmeta:SCGG_RagdollZapper()
 			if timer.RepsLeft(name) <= 0 then 
 			
 			local collision = self:GetCollisionGroup()
-			if collision!=COLLISION_GROUP_WEAPON 
-			or collision!=COLLISION_GROUP_DEBRIS 
-			or collision!=COLLISION_GROUP_DEBRIS_TRIGGER 
-			or collision!=COLLISION_GROUP_WORLD 
-			then 
+			if CollisionCheck(self)==true then 
 			self:SetCollisionGroup(COLLISION_GROUP_WEAPON) 
 			end 
 			
