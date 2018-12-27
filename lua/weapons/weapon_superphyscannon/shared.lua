@@ -322,7 +322,7 @@ end
 		local Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
 		if IsValid(tgt) and 
 		( ( (self:AllowedClass() and tgt:GetMoveType() == MOVETYPE_VPHYSICS and 
-		(GetConVar("scgg_style"):GetInt() <= 0 and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass+1) or GetConVar("scgg_style"):GetInt() >= 1 and tgt:GetPhysicsObject():GetMass() < (self.MaxMass+1) ) )
+		(tgt:GetPhysicsObject():IsValid() and (GetConVar("scgg_style"):GetInt() <= 0 and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass+1) or GetConVar("scgg_style"):GetInt() >= 1 and tgt:GetPhysicsObject():GetMass() < (self.MaxMass+1)) ) )
 		or (tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) ) and tgt:Health() <= self.MaxTargetHealth) or tgt:IsPlayer() or tgt:IsRagdoll() )
 		and !self:NotAllowedClass() ) 
 		and
@@ -1844,7 +1844,21 @@ function entmeta:SCGG_RagdollZapper()
 			self:EmitSound("Weapon_StunStick.Activate", 75, math.Rand(99, 101), 0.1)
 			end
 			if !IsValid(self) then timer.Remove(name) return end
-			if timer.RepsLeft(name) <= 0 then self.SCGG_TimerName = nil self.SCGG_IsBeingZapped = nil timer.Remove(name) return end
+			if timer.RepsLeft(name) <= 0 then 
+			
+			local collision = self:GetCollisionGroup()
+			if collision!=COLLISION_GROUP_WEAPON 
+			or collision!=COLLISION_GROUP_DEBRIS 
+			or collision!=COLLISION_GROUP_DEBRIS_TRIGGER 
+			or collision!=COLLISION_GROUP_WORLD 
+			then 
+			self:SetCollisionGroup(COLLISION_GROUP_WEAPON) 
+			end 
+			
+			self.SCGG_TimerName = nil 
+			self.SCGG_IsBeingZapped = nil 
+			timer.Remove(name) 
+			return end
 	end)
 	end
 end
