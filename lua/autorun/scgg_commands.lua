@@ -48,6 +48,10 @@ if !ConVarExists("scgg_friendly_fire") then
    CreateConVar("scgg_friendly_fire", '1', (FCVAR_GAMEDLL), "to toggle direct weapon interaction against friendly NPCs.", true, true)
 end--12
 
+if !ConVarExists("scgg_claw_mode") then	
+   CreateConVar("scgg_claw_mode", '1', (FCVAR_GAMEDLL), "to toggle claw movement options. 0 = closed. 1 = open. 2 = dynamic.", true, true)
+end--13
+
 --game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 
 --if SERVER then
@@ -252,7 +256,7 @@ panel:ControlHelp("Half-Life 2")
 panel:AddControl("Label", {Text = "Credits:"})
 panel:ControlHelp("Î¤yler Blu  - Original Super Gravity Gun")
 panel:ControlHelp("ErrolLiamP - Fixing / Porting and Additions")
-HL2Options.Options["#Default"]={scgg_enabled="1", scgg_style="0", scgg_friendly_fire="1", scgg_weapon_vaporize="0", scgg_allow_others="0", scgg_keep_armor="0", scgg_light="0", scgg_muzzle_flash="1", scgg_zap="1", scgg_zap_sound="1", scgg_no_effects="0", scgg_equip_sound="0"}
+HL2Options.Options["#Default"]={scgg_enabled="1", scgg_style="0", scgg_friendly_fire="1", scgg_weapon_vaporize="0", scgg_allow_others="0", scgg_keep_armor="0", scgg_claw_mode="1", scgg_light="0", scgg_muzzle_flash="1", scgg_zap="1", scgg_zap_sound="1", scgg_no_effects="0", scgg_equip_sound="0"}
 panel:AddControl("ComboBox",HL2Options)
 panel:AddControl("Slider",{Label = "Weapon Status",min = 0,max = 2,Command = "scgg_enabled"})--1
 panel:ControlHelp("0 = The weapon will be disabled")
@@ -275,24 +279,27 @@ panel:AddControl("Label", {Text = "Foreign Interaction can cause bugs! Use at yo
 panel:AddControl("Slider",{Label = "Armor Drain",min = 0,max = 2,Command = "scgg_keep_armor"})--6
 panel:ControlHelp("0 = All armor will be depleted on weapon disable")
 panel:ControlHelp("1 = Armor will be depleted to 100% on weapon disable")
-panel:ControlHelp("2 = Armor will not be depleted")
-panel:AddControl("Slider",{Label = "Light Settings",min = 0,max = 1,Command = "scgg_light"})--7
+panel:AddControl("Slider",{Label = "Claw Behavior",min = 0,max = 2,Command = "scgg_claw_mode"})--7
+panel:ControlHelp("0 = Claws always closed")
+panel:ControlHelp("1 = Claws always open")
+panel:ControlHelp("2 = Claws in dynamic state")
+panel:AddControl("Slider",{Label = "Light Settings",min = 0,max = 1,Command = "scgg_light"})--8
 panel:ControlHelp("0 = The weapon will not emit a light")
 panel:ControlHelp("1 = The weapon will emit a light")
-panel:AddControl("Slider",{Label = "Muzzle Flash Settings",min = 0,max = 1,Command = "scgg_muzzle_flash"})--8
+panel:AddControl("Slider",{Label = "Muzzle Flash Settings",min = 0,max = 1,Command = "scgg_muzzle_flash"})--9
 panel:ControlHelp("0 = The weapon will not emit a light")
 panel:ControlHelp("1 = The weapon will emit a light")
-panel:AddControl("Slider",{Label = "Electrocute Victims",min = 0,max = 1,Command = "scgg_zap"})--9
+panel:AddControl("Slider",{Label = "Electrocute Victims",min = 0,max = 1,Command = "scgg_zap"})--10
 panel:ControlHelp("0 = The victim will not be electrocuted")
 panel:ControlHelp("1 = The victim will be electrocuted")
-panel:AddControl("Slider",{Label = "Electrocuted Sounds",min = 0,max = 1,Command = "scgg_zap_sound"})--10
+panel:AddControl("Slider",{Label = "Electrocuted Sounds",min = 0,max = 1,Command = "scgg_zap_sound"})--11
 panel:ControlHelp("0 = Electrocuted victims will not emit sounds")
 panel:ControlHelp("1 = Electrocuted victims will emit sounds")
-panel:AddControl("Slider",{Label = "Visual Effects",min = 0,max = 1,Command = "scgg_no_effects"})--11
+panel:AddControl("Slider",{Label = "Visual Effects",min = 0,max = 1,Command = "scgg_no_effects"})--12
 panel:ControlHelp("0 = Visual Effects enabled")
 panel:ControlHelp("1 = Visual Effects disabled")
 panel:ControlHelp("(Holster and Deploy weapon to take effect.)")
-panel:AddControl("Slider",{Label = "Equipping Sound",min = 0,max = 1,Command = "scgg_equip_sound"})--12
+panel:AddControl("Slider",{Label = "Equipping Sound",min = 0,max = 1,Command = "scgg_equip_sound"})--13
 panel:ControlHelp("0 = The weapon will not emit a charge sound after deploying")
 panel:ControlHelp("1 = The weapon will emit a charge sound after deploying")
 end

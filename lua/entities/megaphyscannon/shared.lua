@@ -22,6 +22,7 @@ function ENT:SpawnFunction(ply, tr)
 	ent:SetPos(SpawnPos)
 	ent:Spawn()
 	ent:Activate()
+	ent.ClawOpenState = true
 	ent.Planted = false
 	
 	return ent
@@ -33,7 +34,8 @@ end
 ---------------------------------------------------------*/
 function ENT:Initialize()
 
-	local model = ("models/weapons/errolliamp/w_superphyscannon.mdl")
+	--local model = ("models/weapons/errolliamp/w_superphyscannon.mdl")
+	local model = ("models/weapons/shadowysn/w_superphyscannon.mdl")
 	
 	self.Entity:SetModel(model)
 	
@@ -61,8 +63,11 @@ end
 function ENT:PhysicsCollide(data, physobj)
 	
 	// Play sound on bounce
-	if (data.Speed > 80 and data.DeltaTime > 0.2) then
-		self.Entity:EmitSound("Default.ImpactSoft")
+	if ((data.Speed > 80 and data.Speed <= 180) and data.DeltaTime > 0.2) then
+		self.Entity:EmitSound("weapon.ImpactSoft")
+	end
+	if (data.Speed > 180 and data.DeltaTime > 0.2) then
+		self.Entity:EmitSound("weapon.ImpactHard")
 	end
 end
 
@@ -82,6 +87,11 @@ end
    Name: Think
 ---------------------------------------------------------*/
 function ENT:Think()
+			if self.ClawOpenState == true then
+			self:SetPoseParameter("super_active", 1)
+			else
+			self:SetPoseParameter("super_active", 0)
+			end
 		if game.GetGlobalState("super_phys_gun") == GLOBAL_OFF and GetConVar("scgg_enabled"):GetInt() == 0 and self.Entity:GetNWBool("scgg_spawn_into_old") == true then
 			self.Entity.Fading = true
 			self.Entity:SetNWBool("scgg_spawn_into_old", false)
