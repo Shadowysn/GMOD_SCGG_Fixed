@@ -15,11 +15,13 @@ function ENT:Think()
 	local Owner = self.Entity:GetOwner()
 	if !IsValid(Owner) then self.Entity:Remove() return end
 	
-	if Owner:GetViewEntity():GetClass() == "gmod_cameraprop" then
-		Owner:SetNWBool(	"Camera",			true)
+	--[[if Owner:GetViewEntity():GetClass() != Owner:GetClass() then
+		Owner:SetNWBool(	"SCGG_NotFirstPerson",			true)
 	else
-		Owner:SetNWBool(	"Camera",			false)
-	end
+		Owner:SetNWBool(	"SCGG_NotFirstPerson",			false)
+	end--]]
+	 -- ^ This system of NW Bools is replaced with a direct check on the ViewEntities.
+	 -- It is much faster to directly check on the client than wait for a serversided boolean.
 	
 	if !Owner:Alive() or Owner:GetActiveWeapon():GetClass() != "weapon_superphyscannon" then
 		self.Entity:Remove()

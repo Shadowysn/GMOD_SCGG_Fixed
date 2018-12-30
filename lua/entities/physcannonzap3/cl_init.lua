@@ -18,6 +18,7 @@ function ENT:Initialize()
 Zap:SetInt("$spriterendermode",5)
 ZapWorld:SetInt("$spriterendermode",5)
 Mat:SetInt("$spriterendermode",5)
+MatWorld:SetInt("$spriterendermode",5)
 end
 
 function ENT:Think()
@@ -34,7 +35,7 @@ function ENT:Draw()
 	local StartPos 		= self.Entity:GetPos()
 	local ViewModel 	= Owner == LocalPlayer()
 	
-	if ( ViewModel ) and Owner:GetNWBool("Camera") == false and Owner:Alive() then
+	if ( ViewModel ) and GetViewEntity() == Owner then
 		
 		local vm = Owner:GetViewModel()
 		if (!vm || vm == NULL) then return end
@@ -58,8 +59,8 @@ function ENT:Draw()
 	render.SetMaterial( Zap )
 	
 	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 255, 255, 255, 255 ) ) 
-	else
-		
+	
+	elseif ( (!ViewModel) or GetViewEntity() != Owner ) then
 		local vm = Owner:GetActiveWeapon()
 		if (!vm || vm == NULL) then return end
 		if !IsValid(vm) then return end
@@ -85,7 +86,7 @@ function ENT:Draw()
 	render.DrawSprite( StartPosO, scale, scale, Color(255,255,255,80))
 	render.SetMaterial( ZapWorld )
 	
-	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 255, 255, 255, 255 ) ) 
+	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 190, 255, 252, 255 ) ) 
 	end
 end
 

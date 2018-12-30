@@ -36,7 +36,7 @@ function ENT:Draw()
 	local StartPos 		= self.Entity:GetPos()
 	local ViewModel 	= Owner == LocalPlayer()
 	
-	if ( ViewModel ) and Owner:GetNWBool("Camera") == false then
+	if ( ViewModel ) and GetViewEntity() == Owner then
 		
 		local vm = Owner:GetViewModel()
 		if (!vm || vm == NULL) then return end
@@ -84,8 +84,8 @@ function ENT:Draw()
 		render.DrawSprite( StartPosL, scale, scale, Color(255,255,255,80))
 		render.DrawSprite( StartPosOH, scale, scale, Color(255,255,255,80))
 		render.DrawSprite( StartPosLH, scale, scale, Color(255,255,255,80))
-	else
-		
+	
+	elseif ( (!ViewModel) or GetViewEntity() != Owner ) then
 		local vm = Owner:GetActiveWeapon()
 		if (!vm || vm == NULL) then return end
 		if !Owner:Alive() then return end
@@ -121,7 +121,7 @@ function ENT:Draw()
 		
 --		render.SetMaterial( Main )
 		render.SetMaterial( MatWorld )
-		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,240))
+		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,120))
 --		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,140))
 --		render.SetMaterial( MatWorld )
 		render.DrawSprite( StartPosO, scale3, scale3, Color(255,255,255,80))
@@ -144,16 +144,16 @@ function ENT:Draw()
 	self.Length2 = (StartPosL - StartPos):Length()
 	self.Length3 = (StartPosR - StartPos):Length()
 	
-	if ( ViewModel ) and Owner:GetNWBool("Camera") == false then
+	if ( ViewModel ) and GetViewEntity() == Owner then
 	render.SetMaterial( Zap )
 	render.DrawBeam( StartPosO, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128, Color( 255, 255, 255, 255 ) ) 
 	render.DrawBeam( StartPosL, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
 	render.DrawBeam( StartPosR, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
 	else
 	render.SetMaterial( ZapWorld )
-	render.DrawBeam( StartPosO, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128, Color( 255, 255, 255, 255 ) ) 
-	render.DrawBeam( StartPosL, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
-	render.DrawBeam( StartPosR, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
+	render.DrawBeam( StartPosO, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128, Color( 190, 255, 252, 255 ) ) 
+	render.DrawBeam( StartPosL, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 190, 255, 252, 255 ) ) 
+	render.DrawBeam( StartPosR, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 190, 255, 252, 255 ) ) 
 	end
 end
 

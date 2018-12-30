@@ -63,7 +63,7 @@ function SWEP:Initialize()
 		self.CoreAllowRemove = true
 		self.GlowAllowRemove = true
 		self.MuzzleAllowRemove = true
-		--self.PrimaryDryAnim = true
+		self.PrimaryDryAnim = true
 		self.HPCollideG = COLLISION_GROUP_NONE
 		if SERVER then
 			util.AddNetworkString( "PlayerKilledNPC" )
@@ -184,6 +184,7 @@ function SWEP:TimerDestroyAll()
 	timer.Remove("scgg_move_claws_open")
 	timer.Remove("scgg_move_claws_close")
 	timer.Remove("scgg_claw_close_delay")
+	timer.Remove("scgg_prim_dryfire_timer")
 end
 	
 function SWEP:OwnerChanged()
@@ -333,6 +334,7 @@ end
 		then
 			self:OpenClaws( true )
 		elseif self.TP then
+			timer.Remove("scgg_move_claws_close")
 			self:OpenClaws( false )
 		else
 			if !timer.Exists("scgg_claw_close_delay") and IsValid(self) then
@@ -674,14 +676,17 @@ end
 	
 function SWEP:PrimaryAttack()
 	if self.Fading == true then return end
-		if GetConVar("scgg_style"):GetInt() <= 0 then
-		self.Weapon:SetNextPrimaryFire( CurTime() + 0.5 ) end
-		--if self.PrimaryDryAnim == true then
+		if self.PrimaryDryAnim == true then
 		self.Weapon:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
-		--end
-		if GetConVar("scgg_style"):GetInt() >= 1 then
-		self.Weapon:SetNextPrimaryFire( CurTime() + 0.55 ); end
-		--self.Weapon:SetNextSecondaryFire( CurTime() + 0.3 );
+		end
+		if GetConVar("scgg_style"):GetInt() <= 0 then
+		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.5 ) 
+		self.Weapon:SetNextPrimaryFire( CurTime() + 0.3 ) 
+		elseif GetConVar("scgg_style"):GetInt() >= 1 then
+		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.55 ) 
+		self.Weapon:SetNextPrimaryFire( CurTime() + 0.1 ) 
+		end
+		self.Weapon:SetNextSecondaryFire( CurTime() + 0.3 )
 		
 		--self:OpenClaws( false )
 		local vm = self.Owner:GetViewModel()
@@ -697,6 +702,23 @@ function SWEP:PrimaryAttack()
 			return
 		end
 		
+		local function CreateDryFireTimer()
+			if !timer.Exists("scgg_prim_dryfire_timer") then
+			self.PrimaryDryAnim = false
+			local val = 0
+			if GetConVar("scgg_style"):GetInt() <= 0 then
+				val = 0.6
+			end
+			if GetConVar("scgg_style"):GetInt() >= 1 then
+				val = 0.3
+			end
+			timer.Create("scgg_prim_dryfire_timer", val, 1, function()
+				self.PrimaryDryAnim = true
+				timer.Remove("scgg_prim_dryfire_timer")
+				end )
+			end
+		end
+		
 		local trace = self.Owner:GetEyeTrace()
 		local tgt = trace.Entity
 		
@@ -707,11 +729,14 @@ function SWEP:PrimaryAttack()
 		( getstyle != 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.MaxPuntRange )
 		or self:NotAllowedClass() 
 		or ( tgt:IsNPC() and GetConVar("scgg_friendly_fire"):GetInt()<=0 and self:FriendlyNPC(tgt) ) then
-			--if self.PrimaryDryAnim == true then
+			if self.PrimaryDryAnim == true then
 			self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
-			--end
+			end
+			CreateDryFireTimer()
 			return
 		end
+		
+		CreateDryFireTimer()
 		
 		if tgt:IsNPC() and !self:AllowedClass() and !self:NotAllowedClass() or tgt:IsPlayer() then
 			local ragdoll = nil
@@ -1224,15 +1249,16 @@ function SWEP:DropAndShoot()
 			end) --]]
 			self.HP:SCGG_RagdollZapper()
 			end
-					timer.Simple( 0.02, 
-				function()
-						if GetConVar("scgg_style"):GetInt() <= 0 then
+					--timer.Simple( 0.02, 
+				--function()
 						if IsValid(bone) then
-						bone:AddVelocity(self.Owner:GetAimVector()*(20000/8)) else--/(self.HP:GetPhysicsObject():GetMass()/200)) else
+						if GetConVar("scgg_style"):GetInt() <= 0 then
+						bone:AddVelocity(self.Owner:GetAimVector()*(20000/8))--/(self.HP:GetPhysicsObject():GetMass()/200)) else
+						else
 						bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/8) 
 						end
 						end
-					end )
+					--end )
 				end
 			end
 		else
@@ -1520,7 +1546,7 @@ function SWEP:SecondaryAttack()
 					return
 				end end
 				
-				if tgt:IsRagdoll() or self:AllowedClass() and tgt:GetPhysicsObject():IsMoveable() and ( !constraint.HasConstraints( tgt ) ) then
+				if tgt:IsRagdoll() or self:AllowedClass() and tgt:GetPhysicsObject():IsMoveable() then--and ( !constraint.HasConstraints( tgt ) ) then
 					if GetConVar("scgg_style"):GetInt() <= 0 and Dist < self.HL2MaxPickupRange 
 					or GetConVar("scgg_style"):GetInt() >= 1 and Dist < self.MaxPickupRange then
 						self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
@@ -1600,6 +1626,7 @@ function SWEP:Pickup()
 		self.TP:GetPhysicsObject():EnableMotion(false)
 		end
 		
+		if !constraint.HasConstraints(self.HP) then
 		local bone = math.Clamp(trace.PhysicsBone,0,1)
 		--[[if self.HP:IsRagdoll() then
 		--self.Const = constraint.Ballsocket(self.TP, self.HP, 0, bone,trace.HitNormal, 0, 0,1)
@@ -1620,6 +1647,7 @@ function SWEP:Pickup()
 		else--]]
 		self.Const = constraint.Weld(self.TP, self.HP, 0, bone,0,1)
 		--end
+		end
 		
 		if self.HP:IsRagdoll() then
 			self.HP:SetCollisionGroup(COLLISION_GROUP_DEBRIS_TRIGGER)
@@ -1820,7 +1848,7 @@ local entmeta = FindMetaTable( "Entity" )
 -- I think it's just the name that allowed for more than 1 ragdolls being electrocuted. Even so, the meta keeps it tidy.
 function entmeta:SCGG_RagdollZapper()
 	if GetConVar("scgg_zap"):GetInt() >= 1 then
-	local name = "scgg_zapper_"..math.random()
+	local name = "scgg_zapper_"..self:EntIndex()
 	local ZapRepeats = 16
 	if self.SCGG_IsBeingZapped == true then timer.Adjust(self.SCGG_TimerName,0.3,ZapRepeats) return end
 	self.SCGG_IsBeingZapped = true
@@ -1882,7 +1910,7 @@ end
 function SWEP:Deploy()
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 5 )
 		self.Weapon:SetNextSecondaryFire( CurTime() + 5 )
-		--self.PrimaryDryAnim = true
+		self.PrimaryDryAnim = true
 		--[[if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
 			--print("yeah")
 			net.Start("SCGG_Deploy_DisableGrav")
@@ -1897,12 +1925,18 @@ function SWEP:Deploy()
 		end
 		if GetConVar("scgg_style"):GetInt() <= 0 then
 		self.Weapon:SendWeaponAnim( ACT_VM_DRAW )
-		if ( GetConVar("scgg_equip_sound"):GetInt() >= 1 ) and not ( GetConVar("scgg_enabled"):GetInt() <= 0 ) then
+		if GetConVar("scgg_equip_sound"):GetInt() >= 1 and GetConVar("scgg_enabled"):GetInt() >= 1 then
 		self.Weapon:EmitSound("weapons/physcannon/physcannon_charge.wav") 
 		end
 		end
 		local vm = self.Owner:GetViewModel()
-		timer.Create( "deploy_idle" .. self:EntIndex(), vm:SequenceDuration(), 1, function()
+		local duration = 0
+		--if GetConVar("scgg_style"):GetInt() <= 0 then
+		duration = vm:SequenceDuration()
+		--else
+		--duration = GetConVar("sv_defaultdeployspeed"):GetInt()
+		--end
+		timer.Create( "deploy_idle"..self:EntIndex(), duration, 1, function()
 		if !IsValid( self.Weapon ) then return true end
 		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
 			self.Weapon:SendWeaponAnim( ACT_VM_IDLE )
@@ -1924,6 +1958,7 @@ self:TimerDestroyAll()
 	end
 end--]]
 self.Weapon:StopSound(HoldSound)
+self:SetPoseParameter("super_active", 0)
 if self.TP then
 self.Weapon:Drop()
 end

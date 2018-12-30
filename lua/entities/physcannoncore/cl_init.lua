@@ -31,7 +31,7 @@ function ENT:Draw()
 	local StartPos 		= self.Entity:GetPos()
 	local ViewModel 	= Owner == LocalPlayer()
 	
-	if ( ViewModel ) and Owner:GetNWBool("Camera") == false and Owner:Alive() then
+	if ( ViewModel ) and GetViewEntity() == Owner then
 		
 		local vm = Owner:GetViewModel()
 		if (!vm || vm == NULL) then return end
@@ -75,11 +75,12 @@ function ENT:Draw()
 		
 	
 		
-	elseif ( (!ViewModel) or Owner:GetNWBool("Camera") == true ) and Owner:Alive() then
+	elseif ( (!ViewModel) or GetViewEntity() != Owner ) then
 		local vm = Owner:GetActiveWeapon()
 		if (!vm || vm == NULL) then return end
 		if !Owner:Alive() then return end
 		if not ( Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" ) then return end
+		if GetViewEntity() == Owner then return end
 		
 		--if !IsValid(vm:LookupAttachment("core")) then return end
 		local attachmentID=vm:LookupAttachment("core")

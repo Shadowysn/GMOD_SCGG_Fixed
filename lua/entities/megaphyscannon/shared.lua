@@ -63,8 +63,8 @@ end
 function ENT:PhysicsCollide(data, physobj)
 	
 	// Play sound on bounce
-	if ((data.Speed > 80 and data.Speed <= 180) and data.DeltaTime > 0.2) then
-		self.Entity:EmitSound("weapon.ImpactSoft")
+	if ((data.Speed > 150 and data.Speed <= 180) and data.DeltaTime > 0.2) then
+		self.Entity:EmitSound("weapon.ImpactSoft", 75, 100, vol)
 	end
 	if (data.Speed > 180 and data.DeltaTime > 0.2) then
 		self.Entity:EmitSound("weapon.ImpactHard")
