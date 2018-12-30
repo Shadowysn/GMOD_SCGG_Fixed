@@ -41,3 +41,8 @@ Version 1.1:
 Version 1.8:
 * Proper claw animations! Closed, open or dynamic state. Applies to both viewmodel and worldmodel. (As with all new features, it may be buggy.)
 * Debris ragdolls/props can now be picked up. Previously they could not be detected.
+
+Version 2:
+* Primary attack is now better! (Previously, it took an agonizing 5 seconds if you missed, whilst in the actual HL2 you could shoot earlier than that, with the dry firing animation taking it's own time. 
+In a nutshell, it means the dryfiring anim makes it look like attacking takes 5 secs, but the actual time is shorter.)
+* Effects fixed! No more lua errors when switching from a camera to firstperson. (Still relies on entities, so it'll glitch in mirrors.)
