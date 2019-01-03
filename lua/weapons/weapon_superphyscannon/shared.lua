@@ -27,7 +27,7 @@ SWEP.HL2MaxPuntRange	= 550
 SWEP.MaxPickupRange		= 8050
 SWEP.HL2MaxPickupRange	= 850
 SWEP.MaxTargetHealth	= 125
-SWEP.Distance			= 55 -- 35
+SWEP.Distance			= 45
 	
 SWEP.Primary.ClipSize		= -1
 SWEP.Primary.DefaultClip	= -1
@@ -56,7 +56,7 @@ util.PrecacheModel("models/props_junk/PopCan01a.mdl")
 function SWEP:Initialize()
 		self:SetWeaponHoldType( self.HoldType )
 		self:SetSkin(1)
-		self.ClawOpenState = true
+		self.ClawOpenState = false
 		self.Fade = true
 		self.Fading = false
 		self.RagdollRemoved = false
@@ -65,12 +65,12 @@ function SWEP:Initialize()
 		self.MuzzleAllowRemove = true
 		self.PrimaryDryAnim = true
 		self.HPCollideG = COLLISION_GROUP_NONE
-		if SERVER then
-			util.AddNetworkString( "PlayerKilledNPC" )
+		--if SERVER then
+			--util.AddNetworkString( "PlayerKilledNPC" )
 			--util.AddNetworkString( "PlayerKilledByPlayer" )
 			--util.AddNetworkString( "SCGG_Deploy_DisableGrav" )
 			--util.AddNetworkString( "SCGG_Holster_EnableGrav" )
-		end
+		--end
 		--[[if CLIENT then
 			net.Receive( "SCGG_Deploy_DisableGrav", function() 
 				--print("yeahclient")
@@ -126,10 +126,10 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 			worldframe = worldframe+0.1
 			WorldModel:SetPoseParameter("super_active", worldframe)
 			end
+			if WorldModel:GetPoseParameter("super_active") >= 0.5 then
+				self.ClawOpenState = true
+			end
 		end )
-		if WorldModel:GetPoseParameter("super_active") >= 0.5 then
-		self.ClawOpenState = true
-		end
 		if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel)) then timer.Remove("scgg_move_claws_open") return end
 			if (frame <= 0 or worldframe <= 0) and !self.TP and boolean == true then
 				self.Weapon:StopSound("Weapon_PhysCannon.CloseClaws")
@@ -165,10 +165,10 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 			worldframe = worldframe-0.05
 			WorldModel:SetPoseParameter("super_active", worldframe)
 			end
+				if WorldModel:GetPoseParameter("super_active") < 0.5 then
+				self.ClawOpenState = false
+				end
 		end )
-		if WorldModel:GetPoseParameter("super_active") <= 0.4 then
-		self.ClawOpenState = false
-		end
 		if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel)) then timer.Remove("scgg_move_claws_close") return end
 			if (frame >= 1 or worldframe >= 1) and !self.TP and boolean == true then
 				self.Weapon:StopSound("Weapon_PhysCannon.OpenClaws")
@@ -236,7 +236,8 @@ end
 		if GetConVar("scgg_enabled"):GetInt() <= 0 and self.Fade == true then
 			self.Fade = false
 			self.Fading = true
-			self.Weapon:EmitSound("Weapon_Physgun.Off", 75, 100, 1)
+			self.Weapon:EmitSound("Weapon_Physgun.Off", 75, 100, 0.6)
+			self:CloseClaws( false )
 			--[[self.FadeCore = ents.Create("PhyscannonFade")
 			timer.Create("SCGG_FadeCore_Position", 0.10, 0, function()
 			if !IsValid(self.FadeCore) then 
@@ -261,7 +262,7 @@ end
 			if !self.Owner:HasWeapon( "weapon_physcannon" ) then
 				self.Owner:Give("weapon_physcannon")
 			end
-			if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
+			if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self then
 			self.Owner:SelectWeapon("weapon_physcannon")
 			end
 			self:Remove()
@@ -287,7 +288,7 @@ end
 			PickupRange = self.MaxPickupRange
 			end
 			for _,ent in pairs(ents.FindInSphere( self.Owner:GetShootPos(), PickupRange )) do
-				if (ent:IsRagdoll() or ent:GetClass()=="prop_physics" or ent:GetClass()=="prop_physics_override" or ent:GetClass()=="prop_physics_respawnable" or ent:GetClass()=="func_physbox" or ent:GetClass()=="func_physbox_multiplayer") and ent:GetCollisionGroup() == COLLISION_GROUP_DEBRIS then -- For some reason, ragdolls that are debris cannot be targeted by the weapon, so this converts them to a targetable version.
+				if ( self:AllowedClass(ent) and !self:NotAllowedClass(ent) and ent:GetMoveType() == MOVETYPE_VPHYSICS) and ent:GetCollisionGroup() == COLLISION_GROUP_DEBRIS then -- For some reason, ragdolls that are debris cannot be targeted by the weapon, so this converts them to a targetable version.
 					ent:SetCollisionGroup(COLLISION_GROUP_DEBRIS_TRIGGER)
 				end
 			end
@@ -323,17 +324,18 @@ end
 		
 		if GetConVar("scgg_claw_mode"):GetInt() >= 2 then
 		local Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
-		if IsValid(tgt) and 
-		( ( (self:AllowedClass() and tgt:GetMoveType() == MOVETYPE_VPHYSICS and 
-		GetConVar("scgg_style"):GetInt() <= 0 and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) or GetConVar("scgg_style"):GetInt() >= 1 and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
-		or (tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) ) and tgt:Health() <= self.MaxTargetHealth) or tgt:IsPlayer() or tgt:IsRagdoll() )
-		and !self:NotAllowedClass() ) 
+		if IsValid(tgt) and self.Fading != true and
+		( ( (self:AllowedClass(tgt) and tgt:GetMoveType() == MOVETYPE_VPHYSICS ) and
+		GetConVar("scgg_style"):GetInt() <= 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) 
+		or GetConVar("scgg_style"):GetInt() >= 1 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
+		or ( (tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) ) and tgt:Health() <= self.MaxTargetHealth) or tgt:IsPlayer() or tgt:IsRagdoll() )
+		and !self:NotAllowedClass(tgt) ) 
 		and
 		( (GetConVar("scgg_style"):GetInt() <= 0 and Distance_Test < self.HL2MaxPickupRange) 
 		or (GetConVar("scgg_style"):GetInt() >= 1 and Distance_Test < self.MaxPickupRange) ) 
 		then
 			self:OpenClaws( true )
-		elseif self.TP then
+		elseif self.TP and self.Fading != true then
 			timer.Remove("scgg_move_claws_close")
 			self:OpenClaws( false )
 		else
@@ -424,7 +426,7 @@ end
 			if self.HP and self.HP != NULL and IsValid(self.HP) then
 				if (SERVER) then
 				if !IsValid(self.HP) then self.HP = nil self.Drop() return end
-					HPrad = self.HP:BoundingRadius()/1.5
+					HPrad = self.HP:BoundingRadius()--/1.5
 					if !IsValid(self.Owner) then return end
 					if !IsValid(self.TP) then return end
 					local grabpos = self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.Distance+HPrad)
@@ -460,7 +462,7 @@ end
 				
 				timer.Simple( 0.4, 
 				function()
-					if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
+					if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self and self.Fading == false then
 					self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
 					end
 				end )
@@ -522,9 +524,9 @@ function SWEP:ZapEffect()
 		end
 	end
 
-function SWEP:NotAllowedClass()
-		local trace = self.Owner:GetEyeTrace()
-		local class = trace.Entity:GetClass()
+function SWEP:NotAllowedClass(ent)
+		--local trace = self.Owner:GetEyeTrace()
+		local class = ent:GetClass()
 		if class == "npc_strider"
 			or class == "npc_helicopter"
 			or class == "npc_combinedropship"
@@ -542,15 +544,15 @@ function SWEP:NotAllowedClass()
 		end
 	end
 	
-function SWEP:AllowedClass()
-		local trace = self.Owner:GetEyeTrace()
-		local class = trace.Entity:GetClass()
-		for _,child in pairs(trace.Entity:GetChildren()) do
+function SWEP:AllowedClass(ent)
+		--local trace = self.Owner:GetEyeTrace()
+		local class = ent:GetClass()
+		for _,child in pairs(ent:GetChildren()) do
 			if child:GetClass() == "env_entity_dissolver" then
 				return false
 			end
 		end -- Not yet fully tested
-		--if trace.Entity:GetMoveType() == MOVETYPE_VPHYSICS then
+		--if ent:GetMoveType() == MOVETYPE_VPHYSICS then
 		if class == "npc_manhack"
 			or class == "npc_turret_floor"
 			or class == "npc_sscanner"
@@ -571,7 +573,7 @@ function SWEP:AllowedClass()
 			or class == "item_rpg_round"
 			or class == "item_ammo_ar2"
 			or class == "item_item_crate"
-			or trace.Entity:IsWeapon() and !IsValid(trace.Entity:GetOwner())
+			or ent:IsWeapon() and !IsValid(ent:GetOwner())
 			--[[or class == "weapon_357"
 			or class == "weapon_annabelle"
 			or class == "weapon_alyxgun"
@@ -608,7 +610,7 @@ function SWEP:AllowedClass()
 			or class == "prop_dynamic"
 			or class == "func_brush"	then
 		return true
-		elseif !trace.Entity:IsNPC() and !trace.Entity:IsRagdoll() and GetConVar("scgg_allow_others"):GetInt() >= 1 and !self:NotAllowedClass() then
+		elseif !ent:IsNPC() and !ent:IsRagdoll() and GetConVar("scgg_allow_others"):GetInt() >= 1 and !self:NotAllowedClass(ent) then
 		return true
 		else
 		return false
@@ -681,7 +683,7 @@ function SWEP:PrimaryAttack()
 		end
 		if GetConVar("scgg_style"):GetInt() <= 0 then
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.5 ) 
-		self.Weapon:SetNextPrimaryFire( CurTime() + 0.3 ) 
+		self.Weapon:SetNextPrimaryFire( CurTime() + 0.25 ) 
 		elseif GetConVar("scgg_style"):GetInt() >= 1 then
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.55 ) 
 		self.Weapon:SetNextPrimaryFire( CurTime() + 0.1 ) 
@@ -692,7 +694,7 @@ function SWEP:PrimaryAttack()
 		local vm = self.Owner:GetViewModel()
 		timer.Create( "attack_idle" .. self:EntIndex(), 0.4, 1, function()
 		if !IsValid( self.Weapon ) then return end
-		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
+		if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self and self.Fading == false then
 			self.Weapon:SendWeaponAnim( ACT_VM_IDLE )
 		end
 		end)
@@ -707,7 +709,7 @@ function SWEP:PrimaryAttack()
 			self.PrimaryDryAnim = false
 			local val = 0
 			if GetConVar("scgg_style"):GetInt() <= 0 then
-				val = 0.6
+				val = 0.5
 			end
 			if GetConVar("scgg_style"):GetInt() >= 1 then
 				val = 0.3
@@ -727,7 +729,7 @@ function SWEP:PrimaryAttack()
 		( getstyle == 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.HL2MaxPuntRange )
 		or 
 		( getstyle != 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.MaxPuntRange )
-		or self:NotAllowedClass() 
+		or self:NotAllowedClass(tgt) 
 		or ( tgt:IsNPC() and GetConVar("scgg_friendly_fire"):GetInt()<=0 and self:FriendlyNPC(tgt) ) then
 			if self.PrimaryDryAnim == true then
 			self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
@@ -738,7 +740,7 @@ function SWEP:PrimaryAttack()
 		
 		CreateDryFireTimer()
 		
-		if tgt:IsNPC() and !self:AllowedClass() and !self:NotAllowedClass() or tgt:IsPlayer() then
+		if tgt:IsNPC() and !self:AllowedClass(tgt) and !self:NotAllowedClass(tgt) or tgt:IsPlayer() then
 			local ragdoll = nil
 			if (SERVER) then
 				if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
@@ -985,8 +987,8 @@ function SWEP:PrimaryAttack()
 			--self:DoSparks()
 		end
 		
-		--if self:AllowedClass() or tgt:GetClass() == "prop_vehicle_airboat" or tgt:GetClass() == "prop_vehicle_jeep" and tgt:GetPhysicsObject():IsMoveable() then
-		if self:AllowedClass() or tgt:GetClass() == "prop_vehicle_airboat" or tgt:GetClass() == "prop_vehicle_jeep" then
+		--if self:AllowedClass(tgt) or tgt:GetClass() == "prop_vehicle_airboat" or tgt:GetClass() == "prop_vehicle_jeep" and tgt:GetPhysicsObject():IsMoveable() then
+		if self:AllowedClass(tgt) or tgt:GetClass() == "prop_vehicle_airboat" or tgt:GetClass() == "prop_vehicle_jeep" then
 			self:Visual()
 			if tgt:GetClass() == "prop_combine_ball" then
 				self.Owner:SimulateGravGunPickup( tgt )
@@ -1126,7 +1128,7 @@ function SWEP:PrimaryAttack()
 			end
 		end
 		
-		if self:AllowedClass() and !tgt:IsRagdoll() then
+		if self:AllowedClass(tgt) and !tgt:IsRagdoll() then
 		local dmginfo = DamageInfo();
 		dmginfo:SetDamage( 1 );
 		dmginfo:SetAttacker( self.Owner );
@@ -1333,7 +1335,7 @@ function SWEP:SecondaryAttack()
 		--or ( tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and ( getstyle <= 0 and tgt:GetMass() > self.HL2MaxMass or getstyle >= 1 and tgt:GetMass() > self.MaxMass ) -- Non-functioning
 		then return end
 		
-		if !self:NotAllowedClass() and !self:AllowedClass() then
+		if !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) then
 			if (SERVER) then
 				local Dist = (tgt:GetPos()-self.Owner:GetPos()):Length()
 				if GetConVar("scgg_style"):GetInt() <= 0 and Dist >= self.HL2MaxPickupRange
@@ -1546,7 +1548,7 @@ function SWEP:SecondaryAttack()
 					return
 				end end
 				
-				if tgt:IsRagdoll() or self:AllowedClass() and tgt:GetPhysicsObject():IsMoveable() then--and ( !constraint.HasConstraints( tgt ) ) then
+				if tgt:IsRagdoll() or self:AllowedClass(tgt) and tgt:GetPhysicsObject():IsMoveable() then--and ( !constraint.HasConstraints( tgt ) ) then
 					if GetConVar("scgg_style"):GetInt() <= 0 and Dist < self.HL2MaxPickupRange 
 					or GetConVar("scgg_style"):GetInt() >= 1 and Dist < self.MaxPickupRange then
 						self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
@@ -1592,7 +1594,7 @@ function SWEP:Pickup()
 		
 		timer.Simple( 0.4,
 	function()
-			if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
+			if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self and self.Fading == false then
 			self.Weapon:SendWeaponAnim(ACT_VM_RELOAD)
 			end
 		end )
@@ -1717,7 +1719,7 @@ function SWEP:Drop()
 		timer.Simple( 0.4,
 		function()
 			if !IsValid( self.Weapon ) then return end
-			if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
+			if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self and self.Fading == false then
 				self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
 			end
 		end )
@@ -1938,7 +1940,7 @@ function SWEP:Deploy()
 		--end
 		timer.Create( "deploy_idle"..self:EntIndex(), duration, 1, function()
 		if !IsValid( self.Weapon ) then return true end
-		if self.Owner:GetActiveWeapon():GetClass() == "weapon_superphyscannon" and self.Fading == false then
+		if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self and self.Fading == false then
 			self.Weapon:SendWeaponAnim( ACT_VM_IDLE )
 		end
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.01 )
