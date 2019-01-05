@@ -1,4 +1,12 @@
 # GMOD_SCGG_Fixed
+NOTICE:
+
+With new features, comes new bugs. As I haven't really extensively tested it, the addon will have bugs. Make sure to report them either in my:
+
+Steam discussion: https://steamcommunity.com/workshop/filedetails/discussion/550198171/1742229167180865559/
+
+Issues tab of this github. :P
+
 Installation:
 
 Access the Steam Files, go to steamapps/common/GarrysMod/garrysmod, and put the files into the folder. 
