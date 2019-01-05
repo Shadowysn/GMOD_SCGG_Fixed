@@ -22,7 +22,7 @@ function ENT:SpawnFunction(ply, tr)
 	ent:SetPos(SpawnPos)
 	ent:Spawn()
 	ent:Activate()
-	ent.ClawOpenState = true
+	--ent.ClawOpenState = false
 	ent.Planted = false
 	
 	return ent
@@ -43,7 +43,7 @@ function ENT:Initialize()
 	self.Entity:SetMoveType(MOVETYPE_VPHYSICS)
 	self.Entity:SetSolid(SOLID_VPHYSICS)
 	self.Entity:DrawShadow(true)
-	self.Entity:SetNWBool("scgg_spawn_into_old", true)
+	--self.Entity:SetNWBool("scgg_spawn_into_old", true)
 	
 	self.Entity:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 	
@@ -54,6 +54,16 @@ function ENT:Initialize()
 	end
 
 	self.Entity:SetUseType(SIMPLE_USE)
+	
+	--[[if SERVER then
+		util.AddNetworkString( "SCGG_Entity_InvalidateBone" )
+	end
+	if CLIENT then
+		net.Receive( "SCGG_Entity_InvalidateBone", function( entity ) 
+			print("i has mesage")
+			entity:InvalidateBoneCache()
+		end )
+	end--]]
 end
 
 
@@ -89,12 +99,18 @@ end
 function ENT:Think()
 			if self.ClawOpenState == true then
 			self:SetPoseParameter("super_active", 1)
-			else
+			--net.Start("SCGG_Entity_InvalidateBone")
+			--net.WriteEntity( self )
+			--net.Send( player.GetAll() )
+			elseif self.ClawOpenState != true then
 			self:SetPoseParameter("super_active", 0)
+			--net.Start("SCGG_Entity_InvalidateBone")
+			--net.WriteEntity( self )
+			--net.Send( player.GetAll() )
 			end
-		if game.GetGlobalState("super_phys_gun") == GLOBAL_OFF and GetConVar("scgg_enabled"):GetInt() == 0 and self.Entity:GetNWBool("scgg_spawn_into_old") == true then
+		if game.GetGlobalState("super_phys_gun") == GLOBAL_OFF and GetConVar("scgg_enabled"):GetInt() <= 0 and self.Entity.Fading != true then
 			self.Entity.Fading = true
-			self.Entity:SetNWBool("scgg_spawn_into_old", false)
+			--self.Entity:SetNWBool("scgg_spawn_into_old", false)
 			
 			local coreattachmentID=self.Entity:LookupAttachment("core")
 			local coreattachment = self.Entity:GetAttachment(coreattachmentID)

@@ -15,8 +15,8 @@ SWEP.AutoSwitchTo 		= true
 SWEP.AutoSwitchFrom 		= true
 SWEP.HoldType			= "physgun"
 	
-SWEP.PuntForce			= 280000
---SWEP.HL2PuntForce		= 80000
+SWEP.PuntForce			= 1000000
+SWEP.HL2PuntForce		= 280000
 SWEP.PullForce			= 8000
 SWEP.HL2PullForce		= 800
 SWEP.HL2PullForceRagdoll	= 100000
@@ -323,7 +323,12 @@ end
 		if SERVER then
 		
 		if GetConVar("scgg_claw_mode"):GetInt() >= 2 then
-		local Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+		local Distance_Test = 0
+		if IsValid(tgt) then
+		Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+		else
+		Distance_Test = self.MaxPickupRange+10
+		end
 		if IsValid(tgt) and self.Fading != true and
 		( ( (self:AllowedClass(tgt) and tgt:GetMoveType() == MOVETYPE_VPHYSICS ) and
 		GetConVar("scgg_style"):GetInt() <= 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) 
@@ -382,8 +387,9 @@ end
 		end
 		
 		if !self.Owner:KeyDown(IN_ATTACK) then
-		if GetConVar("scgg_style"):GetInt() >= 1 then
-			self.Weapon:SetNextPrimaryFire( CurTime() - 0.55 ) end
+			if GetConVar("scgg_style"):GetInt() >= 1 then
+				self.Weapon:SetNextPrimaryFire( CurTime() - 0.55 ) 
+			end
 		end
 		--[[if self.Owner:KeyDown(IN_ATTACK) then
 			if !timer.Exists("scgg_prim_dryfire_timer") then
@@ -425,7 +431,7 @@ end
 		if self.TP then
 			if self.HP and self.HP != NULL and IsValid(self.HP) then
 				if (SERVER) then
-				if !IsValid(self.HP) then self.HP = nil self.Drop() return end
+				if !IsValid(self.HP) then self.HP = nil self:Drop() return end
 					HPrad = self.HP:BoundingRadius()--/1.5
 					if !IsValid(self.Owner) then return end
 					if !IsValid(self.TP) then return end
@@ -720,6 +726,9 @@ function SWEP:PrimaryAttack()
 				end )
 			end
 		end
+		local function FadeScreen()
+			self.Owner:ScreenFade( SCREENFADE.IN, Color( 255, 255, 255, 40 ), 0.1, 0 )
+		end
 		
 		local trace = self.Owner:GetEyeTrace()
 		local tgt = trace.Entity
@@ -984,12 +993,14 @@ function SWEP:PrimaryAttack()
 			ragdoll = nil
 			self.SCGGNewRagdollFormed = nil
 			self:Visual()
+			FadeScreen()
 			--self:DoSparks()
 		end
 		
 		--if self:AllowedClass(tgt) or tgt:GetClass() == "prop_vehicle_airboat" or tgt:GetClass() == "prop_vehicle_jeep" and tgt:GetPhysicsObject():IsMoveable() then
 		if self:AllowedClass(tgt) or tgt:GetClass() == "prop_vehicle_airboat" or tgt:GetClass() == "prop_vehicle_jeep" then
 			self:Visual()
+			FadeScreen()
 			if tgt:GetClass() == "prop_combine_ball" then
 				self.Owner:SimulateGravGunPickup( tgt )
 				timer.Simple( 0.01, function() 
@@ -1009,8 +1020,8 @@ function SWEP:PrimaryAttack()
 				tgt:SetOwner(self.Owner)
 				else
 				
-				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*1000000/(tgt:GetPhysicsObject():GetMass()/400)) --1000000
-				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*1000000/(tgt:GetPhysicsObject():GetMass()/400), position )
+				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.HL2PuntForce/(tgt:GetPhysicsObject():GetMass()/400)) --1000000
+				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.HL2PuntForce/(tgt:GetPhysicsObject():GetMass()/400), position )
 				end
 				
 				else
@@ -1059,6 +1070,7 @@ function SWEP:PrimaryAttack()
 		
 		if tgt:IsRagdoll() then
 			self:Visual()
+			FadeScreen()
 			if (SERVER) then
 			
 				--[[for i = 1, tgt:GetPhysicsObjectCount() do
@@ -1130,7 +1142,7 @@ function SWEP:PrimaryAttack()
 		
 		if self:AllowedClass(tgt) and !tgt:IsRagdoll() then
 		local dmginfo = DamageInfo();
-		dmginfo:SetDamage( 1 );
+		dmginfo:SetDamage( 15 );
 		dmginfo:SetAttacker( self.Owner );
 		dmginfo:SetInflictor( self );
 		tgt:TakeDamageInfo(dmginfo)
@@ -1153,6 +1165,7 @@ function SWEP:DropAndShoot()
 		end
 		--self.HP:SetNWBool("launched_by_scgg", true)
 		self.Owner:SimulateGravGunDrop( self.HP )
+		self.Owner:ScreenFade( SCREENFADE.IN, Color( 255, 255, 255, 40 ), 0.1, 0 )
 		local function SCGG_Collide_Damage( entity, data )
 			if ( data.OurOldVelocity:Length() > 250 ) then 
 				local dmginfo = DamageInfo();
@@ -1276,8 +1289,8 @@ function SWEP:DropAndShoot()
 					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*480000,position ) 
 					self.HP:SetOwner(self.Owner)
 					else
-					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*3000000/(self.HP:GetPhysicsObject():GetMass()/400)) --3500000 --500*( self.HP:GetPhysicsObject():GetMass() ) )
-					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*3000000/(self.HP:GetPhysicsObject():GetMass()/400) ,position ) 
+					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.HL2PuntForce/(self.HP:GetPhysicsObject():GetMass()/400)) --3500000 --500*( self.HP:GetPhysicsObject():GetMass() ) )
+					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.HL2PuntForce/(self.HP:GetPhysicsObject():GetMass()/400) ,position ) 
 					end
 					
 					else
@@ -1961,9 +1974,9 @@ self:TimerDestroyAll()
 end--]]
 self.Weapon:StopSound(HoldSound)
 self:SetPoseParameter("super_active", 0)
-if self.TP then
-self.Weapon:Drop()
-end
+--if self.TP then
+--self:Drop()
+--end
 self.HP = nil
 		if self.TP then
 			return false
