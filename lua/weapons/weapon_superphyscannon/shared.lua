@@ -113,7 +113,7 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 		timer.Remove("scgg_move_claws_close")
 
 		timer.Create( "scgg_move_claws_open", 0, 20, function()
-		if !IsValid(self.Owner) or !self.Owner:Alive() then timer.Remove("scgg_move_claws_open") return end
+		if !IsValid(self) or !IsValid(self.Owner) or !self.Owner:Alive() then timer.Remove("scgg_move_claws_open") return end
 		if IsValid(ViewModel) then
 			if frame > 1 then ViewModel:SetPoseParameter("super_active", 1) end
 			--if frame >= 1 then timer.Remove("scgg_move_claws_open") return end
@@ -131,7 +131,7 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 			end
 		end )
 		if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel)) then timer.Remove("scgg_move_claws_open") return end
-			if (frame <= 0 or worldframe <= 0) and !self.TP and boolean == true then
+			if (frame <= 0 or worldframe <= 0) and (!self.TP or !IsValid(self.TP)) and boolean == true then
 				self.Weapon:StopSound("Weapon_PhysCannon.CloseClaws")
 				self.Weapon:EmitSound("Weapon_PhysCannon.OpenClaws")
 			end
@@ -170,7 +170,7 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 				end
 		end )
 		if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel)) then timer.Remove("scgg_move_claws_close") return end
-			if (frame >= 1 or worldframe >= 1) and !self.TP and boolean == true then
+			if (frame >= 1 or worldframe >= 1) and (!self.TP or !IsValid(self.TP)) and boolean == true then
 				self.Weapon:StopSound("Weapon_PhysCannon.OpenClaws")
 				self.Weapon:EmitSound("Weapon_PhysCannon.CloseClaws")
 			end
@@ -190,7 +190,7 @@ end
 function SWEP:OwnerChanged()
 		self:SetSkin(1)
 		self:TPrem()
-		if self.HP then
+		if self.HP and IsValid(self.HP) then
 			self.HP = nil
 		end
 	end
@@ -340,7 +340,7 @@ end
 		or (GetConVar("scgg_style"):GetInt() >= 1 and Distance_Test < self.MaxPickupRange) ) 
 		then
 			self:OpenClaws( true )
-		elseif self.TP and self.Fading != true then
+		elseif self.TP and IsValid(self.TP) and self.Fading != true then
 			timer.Remove("scgg_move_claws_close")
 			self:OpenClaws( false )
 		else
@@ -356,7 +356,7 @@ end
 		
 		end
 		
-		if math.random(  6,  98 ) == 16 and !self.TP and !self.Owner:KeyDown(IN_ATTACK2) and !self.Owner:KeyDown(IN_ATTACK) 
+		if math.random(  6,  98 ) == 16 and (!self.TP or !IsValid(self.TP)) and !self.Owner:KeyDown(IN_ATTACK2) and !self.Owner:KeyDown(IN_ATTACK) 
 		--and !IsValid(self.Zap1) and !IsValid(self.Zap2) and !IsValid(self.Zap3) 
 		then
 			if self.Fading == true then return end
@@ -379,7 +379,7 @@ end
 				self.Zap3:Remove()
 				self.Zap3 = nil
 			end
-		elseif self.Owner:KeyReleased(IN_ATTACK2) and !self.TP then
+		elseif self.Owner:KeyReleased(IN_ATTACK2) and (!self.TP or !IsValid(self.TP)) then
 			if self.Fading == true then return end
 			self:RemoveGlow()
 			self:RemoveCore()
@@ -429,8 +429,9 @@ end
 		end
 		
 		if self.TP then
-			if self.HP and self.HP != NULL and IsValid(self.HP) then
+			if self.HP and IsValid(self.HP) then
 				if (SERVER) then
+				if !IsValid(self.TP) then self.TP = nil if self.HP and IsValid(self.HP) then self:Drop() end return end
 				if !IsValid(self.HP) then self.HP = nil self:Drop() return end
 					HPrad = self.HP:BoundingRadius()--/1.5
 					if !IsValid(self.Owner) then return end
@@ -454,7 +455,7 @@ end
 					self.TP:PointAtEntity(self.Owner)
 				--if self.HP:GetPhysicsObject() == nil then return end
 				--if IsValid(phys) then
-					if IsValid(self.HP) and IsValid(self.HP:GetPhysicsObject()) then
+					if self.HP and IsValid(self.HP) and IsValid(self.HP:GetPhysicsObject()) then
 					self.HP:GetPhysicsObject():Wake()
 					end
 				end --end
@@ -476,11 +477,11 @@ end
 				self:CoreEffect()
 				self:RemoveGlow()
 				
-				if IsValid(self.TP) then
+				if self.TP and IsValid(self.TP) then
 					self.TP:Remove()
 					self.TP = nil
 				end
-				if IsValid(self.HP) then
+				if self.TP and IsValid(self.TP) then
 					self.HP = nil
 				end
 				
@@ -488,14 +489,14 @@ end
 			end
 			
 			if CurTime() >= PropLockTime then
-			if !IsValid(self.HP) then self.HP = nil return end
+			if (!self.HP or !IsValid(self.HP)) then self.HP = nil return end
 				if (self.HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.Distance+HPrad))):Length() >= 80 then
 					self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 					self.Owner:SetAnimation( PLAYER_ATTACK1 )
 					self:Drop()
 				end
 			end
-			if !IsValid(self.TP) then return end
+			if (!self.TP or !IsValid(self.TP)) then return end
 				for _, child in pairs(self.TP:GetChildren()) do
 					if child:GetClass() == "env_entity_dissolver" then
 						child:Remove()
@@ -705,7 +706,7 @@ function SWEP:PrimaryAttack()
 		end
 		end)
 		
-		if self.TP then
+		if self.TP and IsValid(self.TP) then
 			self:DropAndShoot()
 			return
 		end
@@ -955,11 +956,7 @@ function SWEP:PrimaryAttack()
 						--ragdoll:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 					--end
 				--end )
-				if GetConVar("scgg_style"):GetInt() >= 1 then
-					ragdoll:SetPhysicsAttacker(self.Owner, 9)
-				else
-					ragdoll:SetPhysicsAttacker(self.Owner, 4)
-				end
+				ragdoll:SetPhysicsAttacker(self.Owner, 10)
 				
 				--RagdollVisual(ragdoll, 1)
 				for i = 1, ragdoll:GetPhysicsObjectCount() do
@@ -1014,7 +1011,7 @@ function SWEP:PrimaryAttack()
 				local position = trace.HitPos
 				if GetConVar("scgg_style"):GetInt() <= 0 then --Prop Punting
 				
-				if tgt:GetClass() == "prop_combine_ball" then
+				if tgt:GetClass() == "prop_combine_ball" or tgt:GetClass() == "npc_grenade_frag" then
 				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*480000) -- 100
 				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*480000, position ) 
 				tgt:SetOwner(self.Owner)
@@ -1036,11 +1033,7 @@ function SWEP:PrimaryAttack()
 				end
 				
 				end 
-			if GetConVar("scgg_style"):GetInt() >= 1 then
-			tgt:SetPhysicsAttacker(self.Owner, 9)
-			else
-			tgt:SetPhysicsAttacker(self.Owner, 4)
-			end
+			tgt:SetPhysicsAttacker(self.Owner, 10)
 			tgt:Fire("physdamagescale","99999",0)
 			
 			end
@@ -1081,11 +1074,7 @@ function SWEP:PrimaryAttack()
 						tgt:GetPhysicsObject():SetPhysicsAttacker(self.Owner, 4)
 					end
 				end--]]
-				if GetConVar("scgg_style"):GetInt() >= 1 then
-				tgt:SetPhysicsAttacker(self.Owner, 9)
-				else
-				tgt:SetPhysicsAttacker(self.Owner, 4)
-				end
+				tgt:SetPhysicsAttacker(self.Owner, 10)
 				
 				if GetConVar("scgg_zap"):GetInt() >= 1 then
 				tgt:Fire("StartRagdollBoogie","",0) end
@@ -1151,18 +1140,14 @@ function SWEP:PrimaryAttack()
 	end
 	
 function SWEP:DropAndShoot()
-		if !IsValid(self.HP) then self.HP = nil return end
+		if (!self.HP or !IsValid(self.HP)) then self.HP = nil return end
 		self.HP:Fire("EnablePhyscannonPickup","",1)
 		if self.HP:IsRagdoll() then
 		self.HP:SetCollisionGroup( COLLISION_GROUP_NONE )
 		else
 		self.HP:SetCollisionGroup( self.HPCollideG )
 		end
-		if GetConVar("scgg_style"):GetInt() >= 1 then
-		self.HP:SetPhysicsAttacker(self.Owner, 9)
-		else
-		self.HP:SetPhysicsAttacker(self.Owner, 4)
-		end
+		self.HP:SetPhysicsAttacker(self.Owner, 10)
 		--self.HP:SetNWBool("launched_by_scgg", true)
 		self.Owner:SimulateGravGunDrop( self.HP )
 		self.Owner:ScreenFade( SCREENFADE.IN, Color( 255, 255, 255, 40 ), 0.1, 0 )
@@ -1182,7 +1167,7 @@ function SWEP:DropAndShoot()
 		if self.HP:GetClass() == "npc_manhack" then
 		local callback = self.HP:AddCallback("PhysicsCollide", SCGG_Collide_Damage)
 		timer.Simple( 3.5, function() 
-			if IsValid(self.HP) then
+			if self.HP and IsValid(self.HP) then
 				self.HP:RemoveCallback("PhysicsCollide", callback )
 			end
 		end)
@@ -1324,7 +1309,7 @@ function SWEP:DropAndShoot()
 
 function SWEP:SecondaryAttack()
 	if self.Fading == true then return end
-		if self.TP then
+		if self.TP and IsValid(self.TP) then
 			self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 			self.Owner:SetAnimation( PLAYER_ATTACK1 )
 			self:Drop()
@@ -1627,9 +1612,10 @@ function SWEP:Pickup()
 		else
 		self.TP:SetPos(self.HP:GetPhysicsObject():GetMassCenter())
 		end
-		if !IsValid(self.HP) then self.HP = nil return end
+		if (!self.HP or !IsValid(self.HP)) then self.HP = nil return end
 		if IsValid(self.HP:GetPhysicsObject()) then
 		self.TP:SetPos(self.HP:GetPhysicsObject():GetPos())
+		--self.TP:SetPos(self.HP:GetNetworkOrigin())
 		self.TP:SetModel("models/props_junk/PopCan01a.mdl")
 		self.TP:Spawn()
 		self.TP:SetCollisionGroup(COLLISION_GROUP_WORLD)
@@ -1641,7 +1627,7 @@ function SWEP:Pickup()
 		self.TP:GetPhysicsObject():EnableMotion(false)
 		end
 		
-		if !constraint.HasConstraints(self.HP) then
+		--if constraint.FindConstraints(self.HP, Weld) == nil then
 		local bone = math.Clamp(trace.PhysicsBone,0,1)
 		--[[if self.HP:IsRagdoll() then
 		--self.Const = constraint.Ballsocket(self.TP, self.HP, 0, bone,trace.HitNormal, 0, 0,1)
@@ -1662,7 +1648,7 @@ function SWEP:Pickup()
 		else--]]
 		self.Const = constraint.Weld(self.TP, self.HP, 0, bone,0,1)
 		--end
-		end
+		--end
 		
 		if self.HP:IsRagdoll() then
 			self.HP:SetCollisionGroup(COLLISION_GROUP_DEBRIS_TRIGGER)
@@ -1721,7 +1707,7 @@ function SWEP:Drop()
 		if self.HP:GetClass() == "prop_combine_ball" then
 		self.Owner:SimulateGravGunPickup( self.HP )
 		timer.Simple( 0.01, function() 
-		if IsValid(self.HP) then
+		if self.HP and IsValid(self.HP) then
 		self.Owner:SimulateGravGunDrop( self.HP ) 
 		end
 		end)
@@ -1741,7 +1727,7 @@ function SWEP:Drop()
 		self:RemoveGlow()
 		
 		self:TPrem()
-		if self.HP then
+		if self.HP and IsValid(self.HP) then
 			--self.HP = nil
 		end
 		if self.HPCollideG then
@@ -1978,12 +1964,12 @@ self:SetPoseParameter("super_active", 0)
 --self:Drop()
 --end
 self.HP = nil
-		if self.TP then
+		if self.TP and IsValid(self.TP) then
 			return false
 		else
 			self:RemoveFX()
 			self:TPrem()
-			if self.HP then
+			if self.HP and IsValid(self.HP) then
 				self.HP = nil
 			end
 			return true
@@ -2011,7 +1997,7 @@ function SWEP:OnDrop()
 			--grav_entity:GetPhysicsObject():ApplyForceCenter( Vector( 0, 0, -100 ) )
 			--grav_entity:GetPhysicsObject():ApplyForceOffset( Vector( 0, 3500, 0 ) , self:GetPos() )
 			grav_entity.Planted = false
-		if self.HP then
+		if self.HP and IsValid(self.HP) then
 			self.HP = nil
 		end
 	end

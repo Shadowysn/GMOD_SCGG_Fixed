@@ -23,7 +23,7 @@ function ENT:Think()
 	 -- ^ This system of NW Bools is replaced with a direct check on the ViewEntities.
 	 -- It is much faster and safer to directly check on the client than wait for a serversided boolean.
 	
-	if !Owner:Alive() or Owner:GetActiveWeapon():GetClass() != "weapon_superphyscannon" then
+	if !Owner:Alive() or (IsValid(Owner:GetActiveWeapon()) and Owner:GetActiveWeapon():GetClass() != "weapon_superphyscannon") then
 		self.Entity:Remove()
 		--[[for k,v in pairs(player.GetAll()) do
 			v:ConCommand("stopsounds") -- fix for holdsound bug
