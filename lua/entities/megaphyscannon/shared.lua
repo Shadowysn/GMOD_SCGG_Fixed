@@ -64,6 +64,7 @@ function ENT:Initialize()
 			entity:InvalidateBoneCache()
 		end )
 	end--]]
+	self.Entity:Fire("AddOutput", "classname weapon_superphyscannon", 0)
 end
 
 

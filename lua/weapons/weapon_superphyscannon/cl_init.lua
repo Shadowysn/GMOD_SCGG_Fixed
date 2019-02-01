@@ -3,7 +3,7 @@ include ("shared.lua")
 SWEP.Category			= "Half-Life 2"
 if (CLIENT) then
 	--SWEP.PrintName			= "Super Gravity Gun"
-	SWEP.Author			= "ErrolLiamP, Î¤yler Blu, ErrolLiamP"
+	SWEP.Author			= "ErrolLiamP, Î¤yler Blu, pillow, Shadowysn"
 	SWEP.Slot			= 1
 	SWEP.SlotPos			= 0
 	SWEP.IconLetter			= "k"
@@ -13,7 +13,7 @@ SWEP.SlotPos 			= 0
 SWEP.DrawAmmo			= false
 SWEP.DrawCrosshair 		= true
 	
-SWEP.Author			= "ErrolLiamP, Î¤yler Blu, ErrolLiamP"
+SWEP.Author			= "ErrolLiamP, Î¤yler Blu, pillow, Shadowysn"
 SWEP.Purpose			= ""
 SWEP.Instructions		= ""
 SWEP.BounceWeaponIcon	= false

@@ -58,7 +58,7 @@ function ENT:Draw()
 	render.DrawSprite( StartPosO, scale, scale, Color(255,255,255,80))
 	render.SetMaterial( Zap )
 	
-	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 255, 255, 255, 255 ) ) 
+	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 205, 255, 195, 195 ) ) 
 	
 	elseif ( (!ViewModel) or GetViewEntity() != Owner ) then
 		local vm = Owner:GetActiveWeapon()

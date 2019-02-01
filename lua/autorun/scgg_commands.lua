@@ -1,15 +1,15 @@
 //Commands
 
 if !ConVarExists("scgg_style") then	
-   CreateConVar("scgg_style", '0', (FCVAR_GAMEDLL), "to change if the weapon is styled like Half-Life 2 or Garry's Mod.", true, true)
+   CreateConVar("scgg_style", '0', (FCVAR_ARCHIVE), "to change if the weapon is styled like Half-Life 2 or Garry's Mod.", true, true)
 end--1
 
 if !ConVarExists("scgg_light") then	
-   CreateConVar("scgg_light", '0', (FCVAR_GAMEDLL), "to change if the weapon emits a light.", true, true)
+   CreateConVar("scgg_light", '0', (FCVAR_ARCHIVE), "to change if the weapon emits a light.", true, true)
 end--2
 
 if !ConVarExists("scgg_muzzle_flash") then	
-   CreateConVar("scgg_muzzle_flash", '1', (FCVAR_GAMEDLL), "to change if the weapon emits a light when attacking.", true, true)
+   CreateConVar("scgg_muzzle_flash", '1', (FCVAR_ARCHIVE), "to change if the weapon emits a light when attacking.", true, true)
 end--3
 
 if !ConVarExists("scgg_zap") then	
@@ -35,6 +35,10 @@ end--8
 if !ConVarExists("scgg_enabled") then	
    CreateConVar("scgg_enabled", '1', (FCVAR_ARCHIVE), "to toggle weapon availability. 0 = any super-charged gravity gun will revert to normal. 1 = Enable, don't do anything else. 2 = Enable, alter various settings.", true, true)
 end--9
+
+if !ConVarExists("scgg_cone") then	
+   CreateConVar("scgg_cone", '0', (FCVAR_ARCHIVE), "DEBUG-TESTING; to enable grabbing objects without directly looking at them, via a cone.", true, true)
+end--2
 
 if !ConVarExists("scgg_weapon_vaporize") then	
    CreateConVar("scgg_weapon_vaporize", '0', (FCVAR_ARCHIVE), "to toggle map-wide dropped weapon vaporization.", true, true)
@@ -93,8 +97,7 @@ if GetConVar("scgg_enabled"):GetInt() >= 2 then
 	owner.SCGG_Dropping = nil
 end
 end )
-		--cvars.AddChangeCallback( "scgg_weapon_vaporize", function( convar_name, value_old, value_new )
--- ^ This breaks.
+
 hook.Add("Think","SCGG_Global_Think",function() 
 -- ^ Start of think hook
 if GetConVar("scgg_weapon_vaporize"):GetInt() == 1 then
@@ -106,7 +109,8 @@ if GetConVar("scgg_weapon_vaporize"):GetInt() == 1 then
 			wpn:SetKeyValue("spawnflags","2") 
 			-- ^ I don't know what I was trying to do with this.
 		end--]]
-			if IsValid(wpn) and wpn:IsValid() and ( wpn:IsWeapon() or wpn:GetClass() == "item_ammo_ar2_altfire" ) and !wpn:CreatedByMap() and wpn:GetClass() != ("weapon_physcannon" or "weapon_superphyscannon") then
+			if IsValid(wpn) and wpn:IsValid() and ( wpn:IsWeapon() or wpn:GetClass() == "item_ammo_ar2_altfire" ) and !wpn:CreatedByMap() and 
+			(wpn:GetClass() != "weapon_physcannon" and wpn:GetClass() != "weapon_superphyscannon") then
 			-- ^ Valid check start
 		for _, child in pairs(wpn:GetChildren()) do
 			if child:GetClass() == "env_entity_dissolver" then
@@ -224,9 +228,6 @@ end
 
 end) 
 -- ^ End of think hook.
-
-		--end )
-		-- ^ For the cvar callback.
 
 --[[hook.Add("Think","SCGG_Weapon_ServerRagdoll_Think",function() -- Acts like Keep Corpses :\
 if GetConVar("scgg_enabled"):GetInt() >= 2 then
