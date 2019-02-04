@@ -3,7 +3,7 @@ include('shared.lua')
 local Zap = Material( "sprites/physcannon_bluelight1b" )
 Zap:SetInt("$spriterendermode",5)
 
-local ZapWorld = Material( "sprites/physbeama" )
+local ZapWorld = Material( "sprites/lgtning" )
 ZapWorld:SetInt("$spriterendermode",5)
 
 local Mat = Material( "sprites/blueflare1_noz" )
@@ -58,7 +58,7 @@ function ENT:Draw()
 	render.DrawSprite( StartPosO, scale, scale, Color(255,255,255,80))
 	render.SetMaterial( Zap )
 	
-	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 205, 255, 195, 195 ) ) 
+	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 255, 255, 255, 195 ) ) 
 	
 	elseif ( (!ViewModel) or GetViewEntity() != Owner ) then
 		local vm = Owner:GetActiveWeapon()
@@ -86,7 +86,7 @@ function ENT:Draw()
 	render.DrawSprite( StartPosO, scale, scale, Color(255,255,255,80))
 	render.SetMaterial( ZapWorld )
 	
-	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 190, 255, 252, 255 ) ) 
+	render.DrawBeam( StartPosO, StartPos, 3, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128	, Color( 255, 255, 255, 255 ) ) 
 	end
 end
 

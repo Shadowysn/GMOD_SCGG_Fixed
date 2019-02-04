@@ -7,7 +7,7 @@ MatWorld:SetInt("$spriterendermode",5)
 local Zap = Material( "sprites/physcannon_bluelight1b" )
 Zap:SetInt("$spriterendermode",5)
 --local ZapWorld = Material( "sprites/bluelight1" )
-local ZapWorld = Material( "sprites/physbeama" )
+local ZapWorld = Material( "sprites/lgtning" )
 ZapWorld:SetInt("$spriterendermode",5)
 local Main = Material( "effects/fluttercore" )
 Main:SetInt("$spriterendermode",5)
@@ -152,9 +152,9 @@ function ENT:Draw()
 	render.DrawBeam( StartPosR, StartPos, 5, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 205, 255, 195, 195 ) ) 
 	else
 	render.SetMaterial( ZapWorld )
-	render.DrawBeam( StartPosO, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128, Color( 190, 255, 252, 255 ) ) 
-	render.DrawBeam( StartPosL, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 190, 255, 252, 255 ) ) 
-	render.DrawBeam( StartPosR, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 190, 255, 252, 255 ) ) 
+	render.DrawBeam( StartPosO, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length / 128, Color( 255, 255, 255, 255 ) ) 
+	render.DrawBeam( StartPosL, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
+	render.DrawBeam( StartPosR, StartPos, 2, math.Rand( 0, 1 ), math.Rand( 0, 1 ) + self.Length2 / 128, Color( 255, 255, 255, 255 ) ) 
 	end
 end
 

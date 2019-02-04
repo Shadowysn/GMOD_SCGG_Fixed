@@ -24,7 +24,7 @@ SWEP.MaxMass			= 16500
 SWEP.HL2MaxMass			= 5500
 SWEP.MaxPuntRange		= 1650
 SWEP.HL2MaxPuntRange	= 550
-SWEP.MaxPickupRange		= 850 -- 2550; The cone detection is not as range-perfect as traces. It will cause the weapon to fail grabbing an object!
+SWEP.MaxPickupRange		= 2550--; The cone detection is not as range-perfect as traces. It will cause the weapon to fail grabbing an object!
 SWEP.HL2MaxPickupRange	= 850
 SWEP.ConeWidth			= 0.88 -- Higher numbers make it thinner, lower numbers widen it.
 SWEP.MaxTargetHealth	= 125
@@ -389,7 +389,7 @@ end
 			end
 			for T,ent in pairs( cone ) do
 				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( ent:IsNPC() or ent:IsPlayer() ) then
+					if ( (ent:IsNPC() and ent:Health() > 0) or (ent:IsPlayer() and ent:Alive()) ) then
 					tgt = ent
 					return
 					end
@@ -409,6 +409,17 @@ end
 					tgt = ent
 					return
 					end
+				end
+			end
+			if tgt and IsValid(tgt) and tgt:IsValid() then
+				local tr_hull = util.TraceHull( { 
+					start = self.Owner:GetShootPos(),
+					endpos = self.Owner:GetShootPos() + ( self.Owner:GetAimVector() ),
+					mask = MASK_SHOT,
+					collisiongroup = COLLISION_GROUP_WORLD
+				} )
+				if ( tr_hull.StartSolid or tr_hull.AllSolid ) then--tr_hull.fraction > 1.0 or tr_hull.StartSolid or tr_hull.AllSolid ) then
+					tgt = nil
 				end
 			end
 		end
@@ -692,7 +703,7 @@ function SWEP:AllowedClass(ent)
 			or class == "prop_dynamic"
 			or class == "func_brush"	then
 		return true
-		elseif !ent:IsNPC() and !ent:IsRagdoll() and GetConVar("scgg_allow_others"):GetInt() >= 1 and !self:NotAllowedClass(ent) then
+		elseif !ent:IsNPC() and !ent:IsPlayer() and !ent:IsRagdoll() and GetConVar("scgg_allow_others"):GetInt() >= 1 and !self:NotAllowedClass(ent) then
 		return true
 		else
 		return false
@@ -836,8 +847,12 @@ function SWEP:PrimaryAttack()
 				if ( GetConVar("scgg_style"):GetInt() <= 0 and ( tgt:IsNPC() and tgt:Health() > self.MaxTargetHealth or tgt:IsPlayer() and tgt:Health()+tgt:Armor() > self.MaxTargetHealth ) ) or ( !util.IsValidRagdoll(tgt:GetModel()) ) then
 					local dmginfo = DamageInfo()
 					dmginfo:SetDamage( self.MaxTargetHealth )
+					dmginfo:SetDamageForce( self.Owner:GetShootPos() )
+					dmginfo:SetDamagePosition( trace.HitPos )
+					dmginfo:SetDamageType( DMG_SHOCK )
 					dmginfo:SetAttacker( self.Owner )
 					dmginfo:SetInflictor( self.Weapon )
+					dmginfo:SetReportedPosition( self.Owner:GetShootPos() )
 					tgt:TakeDamageInfo( dmginfo )
 				else
 				
@@ -859,6 +874,7 @@ function SWEP:PrimaryAttack()
 					local dmg = DamageInfo()
 					dmg:SetDamage( tgt:Health() )
 					dmg:SetDamageForce( self.Owner:GetShootPos() )
+					dmg:SetDamagePosition( trace.HitPos )
 					dmg:SetDamageType( DMG_SHOCK )
 					dmg:SetAttacker( self.Owner )
 					dmg:SetInflictor( self.Weapon )
@@ -897,7 +913,7 @@ function SWEP:PrimaryAttack()
 				
 				-- Just in case the NPC is scripted like VJ Base
 				if tgt:GetActiveWeapon():IsValid() then
-				local wep = trace.Entity:GetActiveWeapon()
+				local wep = tgt:GetActiveWeapon()
 				--local model = wep:GetModel()
 				local wepclass = wep:GetClass()
 				
@@ -997,7 +1013,8 @@ function SWEP:PrimaryAttack()
 					--tgt:AddDeaths(1)
 					local dmg = DamageInfo()
 					dmg:SetDamage( tgt:Health() )
-					dmg:SetDamageForce( Vector( 0, 0, 0 ) )
+					dmg:SetDamageForce( self.Owner:GetShootPos() )
+					dmg:SetDamagePosition( trace.HitPos )
 					dmg:SetDamageType( DMG_SHOCK )
 					dmg:SetAttacker( self.Owner )
 					dmg:SetInflictor( self.Weapon )
@@ -1206,12 +1223,16 @@ function SWEP:PrimaryAttack()
 			end
 		end
 		
-		if self:AllowedClass(tgt) and !tgt:IsRagdoll() then
-		local dmginfo = DamageInfo();
-		dmginfo:SetDamage( 15 );
-		dmginfo:SetAttacker( self.Owner );
-		dmginfo:SetInflictor( self );
-		tgt:TakeDamageInfo(dmginfo)
+		if self:AllowedClass(tgt) and !tgt:IsRagdoll() and !CLIENT then
+			local damageinfo = DamageInfo()
+			damageinfo:SetDamage( 10 )
+			damageinfo:SetDamageForce( self.Owner:GetShootPos() )
+			damageinfo:SetDamagePosition( tgt:GetPos() )
+			damageinfo:SetDamageType( DMG_SHOCK )
+			damageinfo:SetAttacker( self.Owner )
+			damageinfo:SetInflictor( self.Weapon )
+			damageinfo:SetReportedPosition( self.Owner:GetShootPos() )
+			tgt:TakeDamageInfo(damageinfo)
 		end
 		
 	end
@@ -1284,11 +1305,10 @@ function SWEP:DropAndShoot()
 				end
 			end )--]]
 	
-	local dmginfo = DamageInfo();
-	dmginfo:SetDamage( 500 );
-	dmginfo:SetAttacker( self:GetOwner() );
-	dmginfo:SetInflictor( self );
-		
+	local dmginfo = DamageInfo()
+	dmginfo:SetDamage( 500 )
+	dmginfo:SetAttacker( self:GetOwner() )
+	dmginfo:SetInflictor( self )
 		
 			--local dissolver = ents.Create("env_entity_dissolver")
 	--dissolver:SetKeyValue("magnitude",0)
@@ -1408,8 +1428,9 @@ function SWEP:SecondaryAttack()
 			end
 			local tracerange = (trace.HitPos-trace.StartPos):Length()
 			if tracerange < PickupRange then
-				PickupRange = tracerange
+				PickupRange = tracerange+30
 			end
+			
 			local cone = ents.FindInCone( self.Owner:EyePos(), self.Owner:GetAimVector(), PickupRange, self.ConeWidth )
 			for T,ent in pairs( cone ) do
 				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
@@ -1421,7 +1442,7 @@ function SWEP:SecondaryAttack()
 			end
 			for T,ent in pairs( cone ) do
 				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( ent:IsNPC() or ent:IsPlayer() ) then
+					if ( (ent:IsNPC() and ent:Health() > 0) or (ent:IsPlayer() and ent:Alive()) ) then
 					tgt = ent
 					return
 					end
@@ -1441,6 +1462,17 @@ function SWEP:SecondaryAttack()
 					tgt = ent
 					return
 					end
+				end
+			end
+			if tgt and IsValid(tgt) and tgt:IsValid() then
+				local tr_hull = util.TraceHull( { 
+					start = self.Owner:GetShootPos(),
+					endpos = self.Owner:GetShootPos() + ( self.Owner:GetAimVector() ),
+					mask = MASK_SHOT,
+					collisiongroup = COLLISION_GROUP_WORLD
+				} )
+				if ( tr_hull.StartSolid or tr_hull.AllSolid ) then--tr_hull.fraction > 1.0 or tr_hull.StartSolid or tr_hull.AllSolid ) then
+					tgt = nil
 				end
 			end
 		end
@@ -1489,7 +1521,7 @@ function SWEP:SecondaryAttack()
 				if tgt:IsNPC() and ( GetConVar("scgg_friendly_fire"):GetInt()>=1 or !self:FriendlyNPC(tgt) ) or tgt:IsPlayer() then
 					
 					if tgt:IsPlayer() then
-						if tgt:Health() >= 1 then
+						if tgt:Health() > 0 then
 							--tgt:Fire( "AddOutput", "health 0", 0 )
 							tgt:SetHealth( 0 )
 						end
@@ -1555,7 +1587,7 @@ function SWEP:SecondaryAttack()
 					end
 					
 					if tgt:GetActiveWeapon():IsValid() then
-						local wep = trace.Entity:GetActiveWeapon()
+						local wep = tgt:GetActiveWeapon()
 						--local model = wep:GetModel()
 						local wepclass = wep:GetClass()
 						

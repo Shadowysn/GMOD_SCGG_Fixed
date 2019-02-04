@@ -38,23 +38,23 @@ end--9
 
 if !ConVarExists("scgg_cone") then	
    CreateConVar("scgg_cone", '0', (FCVAR_ARCHIVE), "DEBUG-TESTING; to enable grabbing objects without directly looking at them, via a cone.", true, true)
-end--2
+end--10
 
 if !ConVarExists("scgg_weapon_vaporize") then	
    CreateConVar("scgg_weapon_vaporize", '0', (FCVAR_ARCHIVE), "to toggle map-wide dropped weapon vaporization.", true, true)
-end--10
+end--11
 
 if !ConVarExists("scgg_keep_armor") then	
    CreateConVar("scgg_keep_armor", '0', (FCVAR_ARCHIVE), "to keep armor after weapon disable. 0 = remove all armor. 1 = lower to 100. 2 = keep armor.", true, true)
-end--11
+end--12
 
 if !ConVarExists("scgg_friendly_fire") then	
    CreateConVar("scgg_friendly_fire", '1', (FCVAR_ARCHIVE), "to toggle direct weapon interaction against friendly NPCs.", true, true)
-end--12
+end--13
 
 if !ConVarExists("scgg_claw_mode") then	
    CreateConVar("scgg_claw_mode", '1', (FCVAR_ARCHIVE), "to toggle claw movement options. 0 = closed. 1 = open. 2 = dynamic.", true, true)
-end--13
+end--14
 
 --game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 
