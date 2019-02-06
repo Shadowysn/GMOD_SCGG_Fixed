@@ -65,3 +65,7 @@ In a nutshell, it means the dryfiring anim makes it look like attacking takes 5 
 Version 2.3+Workshop Release:
 * Toggleable cone detection, however it is still W.I.P. and is not recommended to use if you want stability.
 * Minor adjustments to the glowing effects.
+
+Version 2.4
+* Primary delay removed as soon as a valid object enters your crosshair.
+* 
