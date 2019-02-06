@@ -68,4 +68,3 @@ Version 2.3+Workshop Release:
 
 Version 2.4
 * Primary delay removed as soon as a valid object enters your crosshair.
-* 
