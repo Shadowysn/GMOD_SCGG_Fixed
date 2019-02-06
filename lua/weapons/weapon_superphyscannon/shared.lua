@@ -65,7 +65,7 @@ function SWEP:Initialize()
 		self.CoreAllowRemove = true
 		self.GlowAllowRemove = true
 		self.MuzzleAllowRemove = true
-		self.PrimaryDryAnim = true
+		self.PrimaryFired = false
 		self.HPCollideG = COLLISION_GROUP_NONE
 		--if SERVER then
 			--util.AddNetworkString( "PlayerKilledNPC" )
@@ -227,7 +227,7 @@ function SWEP:TimerDestroyAll()
 	timer.Remove("scgg_move_claws_open")
 	timer.Remove("scgg_move_claws_close")
 	timer.Remove("scgg_claw_close_delay")
-	timer.Remove("scgg_prim_dryfire_timer")
+	timer.Remove("scgg_primaryfired_timer")
 end
 	
 function SWEP:OwnerChanged()
@@ -237,6 +237,29 @@ function SWEP:OwnerChanged()
 			self.HP = nil
 		end
 	end
+	
+function SWEP:PuntCheck(tgt)
+	local DistancePunt_Test = 0
+	if tgt and IsValid(tgt) then
+	DistancePunt_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+	else
+	DistancePunt_Test = self.MaxPickupRange+10
+	end
+	if tgt and IsValid(tgt) and self.Fading != true and
+	( ( (self:AllowedClass(tgt) and tgt:GetMoveType() == MOVETYPE_VPHYSICS ) and
+	GetConVar("scgg_style"):GetInt() <= 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) 
+	or GetConVar("scgg_style"):GetInt() >= 1 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
+	or ( (  tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) )  ) or tgt:IsPlayer() or tgt:IsRagdoll() )
+	and !self:NotAllowedClass(tgt) ) 
+	and
+	( (GetConVar("scgg_style"):GetInt() <= 0 and DistancePunt_Test < self.HL2MaxPuntRange) 
+	or (GetConVar("scgg_style"):GetInt() >= 1 and DistancePunt_Test < self.MaxPuntRange) ) 
+	--and !self.Owner:KeyDown(IN_ATTACK)
+	then
+		return true
+	end
+	return false
+end
 	
 function SWEP:Think()
 if GetConVar("scgg_style"):GetInt() <= 0 then
@@ -366,7 +389,7 @@ end
 		local tracetgt = trace.Entity
 		local tgt = NULL
 		
-		if GetConVar("scgg_cone"):GetInt() >= 1 then--(!tgt or !tgt:IsValid() or tgt == NULL) and GetConVar("scgg_cone"):GetInt() >= 1 then
+		if GetConVar("scgg_cone"):GetInt() >= 1 and (!tracetgt or !tracetgt:IsValid() or tracetgt == NULL) then--(!tgt or !tgt:IsValid() or tgt == NULL) and GetConVar("scgg_cone"):GetInt() >= 1 then
 		local function GetConeEntForClaw() -- There are actually two local functions (the other being GetConeEntForClaw), as the SWEP function would glitch out. Again, sorry for making this swep a mess :(
 			local PickupRange = 0
 			if GetConVar("scgg_style"):GetInt() <= 0 then
@@ -424,14 +447,24 @@ end
 			end
 		end
 		GetConeEntForClaw()
-		elseif GetConVar("scgg_cone"):GetInt() <= 0 then
+		else--if GetConVar("scgg_cone"):GetInt() <= 0 then
 			tgt = tracetgt
+		end
+		
+		if ( !self.TP or !IsValid(self.TP) ) and !self.Owner:KeyDown(IN_ATTACK2) then
+		
+		if self:PuntCheck(tracetgt)==true then
+			self.Weapon:SetNextPrimaryFire( CurTime() )
+		end
+		
 		end
 		
 		if SERVER then
 		
-		if GetConVar("scgg_claw_mode"):GetInt() >= 2 then
 		local Distance_Test = 0
+		local clawcvar = GetConVar("scgg_claw_mode"):GetInt()
+		if clawcvar >= 2 then
+		
 		if IsValid(tgt) then
 		Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
 		else
@@ -460,6 +493,7 @@ end
 			end )
 			end
 		end
+		
 		end
 		
 		end
@@ -499,15 +533,6 @@ end
 				self.Weapon:SetNextPrimaryFire( CurTime() - 0.55 ) 
 			end
 		end
-		--[[if self.Owner:KeyDown(IN_ATTACK) then
-			if !timer.Exists("scgg_prim_dryfire_timer") then
-			self.PrimaryDryAnim = false
-			timer.Create("scgg_prim_dryfire_timer", 0.55, 1, function()
-				self.PrimaryDryAnim = true
-				timer.Remove("scgg_prim_dryfire_timer")
-				end )
-			end
-		end--]]
 		
 		if self.Owner:KeyPressed(IN_ATTACK2) then
 			if self.Fading == true then return end
@@ -770,20 +795,26 @@ function SWEP:AllowedCenterPhysicsClass()
 end
 	
 function SWEP:PrimaryAttack()
-	if self.Fading == true then return end
-		if self.PrimaryDryAnim == true then
+	if self.Fading == true or self.PrimaryFired == true then return end
 		self.Weapon:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
-		end
+		local primaryfire_delay = 0
 		if GetConVar("scgg_style"):GetInt() <= 0 then
-		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.5 ) 
-		self.Weapon:SetNextPrimaryFire( CurTime() + 0.25 ) 
+		self.Weapon:SetNextPrimaryFire( CurTime() + 0.5 ) 
+		primaryfire_delay = 0.5
 		elseif GetConVar("scgg_style"):GetInt() >= 1 then
-		--self.Weapon:SetNextPrimaryFire( CurTime() + 0.55 ) 
-		self.Weapon:SetNextPrimaryFire( CurTime() + 0.1 ) 
+		self.Weapon:SetNextPrimaryFire( CurTime() + 0.55 ) 
+		primaryfire_delay = 0.55
+		end
+		if self:PuntCheck(self.Owner:GetEyeTrace().Entity)==true then
+			self.PrimaryFired = true
+			timer.Create( "scgg_primaryfired_timer", primaryfire_delay, 1, function() 
+				if IsValid(self.Owner) and IsValid(self.Weapon) and self.Owner:Alive() and self.Owner:GetActiveWeapon() == self then
+				self.PrimaryFired = false
+				end
+			end)
 		end
 		self.Weapon:SetNextSecondaryFire( CurTime() + 0.3 )
 		
-		--self:OpenClaws( false )
 		local vm = self.Owner:GetViewModel()
 		timer.Create( "attack_idle" .. self:EntIndex(), 0.4, 1, function()
 		if !IsValid( self.Weapon ) then return end
@@ -797,22 +828,6 @@ function SWEP:PrimaryAttack()
 			return
 		end
 		
-		local function CreateDryFireTimer()
-			if !timer.Exists("scgg_prim_dryfire_timer") then
-			self.PrimaryDryAnim = false
-			local val = 0
-			if GetConVar("scgg_style"):GetInt() <= 0 then
-				val = 0.5
-			end
-			if GetConVar("scgg_style"):GetInt() >= 1 then
-				val = 0.3
-			end
-			timer.Create("scgg_prim_dryfire_timer", val, 1, function()
-				self.PrimaryDryAnim = true
-				timer.Remove("scgg_prim_dryfire_timer")
-				end )
-			end
-		end
 		local function FadeScreen()
 			self.Owner:ScreenFade( SCREENFADE.IN, Color( 255, 255, 255, 40 ), 0.1, 0 )
 		end
@@ -827,14 +842,9 @@ function SWEP:PrimaryAttack()
 		( getstyle != 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.MaxPuntRange )
 		or self:NotAllowedClass(tgt) 
 		or ( tgt:IsNPC() and GetConVar("scgg_friendly_fire"):GetInt()<=0 and self:FriendlyNPC(tgt) ) then
-			if self.PrimaryDryAnim == true then
 			self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
-			end
-			CreateDryFireTimer()
 			return
 		end
-		
-		CreateDryFireTimer()
 		
 		if tgt:IsNPC() and !self:AllowedClass(tgt) and !self:NotAllowedClass(tgt) or tgt:IsPlayer() then
 			local ragdoll = nil
@@ -1764,8 +1774,8 @@ function SWEP:Pickup()
 		PropLockTime = CurTime()+1
 		
 		timer.Simple( 0.4,
-	function()
-			if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self and self.Fading == false then
+		function()
+			if IsValid(self.Owner) and IsValid(self.Weapon) and self.Owner:Alive() and self.Owner:GetActiveWeapon() == self and self.Fading == false then
 			self.Weapon:SendWeaponAnim(ACT_VM_RELOAD)
 			end
 		end )
@@ -2116,7 +2126,7 @@ function SWEP:Deploy()
 		self.CoreAllowRemove = true
 		self.GlowAllowRemove = true
 		self.MuzzleAllowRemove = true
-		self.PrimaryDryAnim = true
+		self.PrimaryFired = false
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 5 )
 		self.Weapon:SetNextSecondaryFire( CurTime() + 5 )
 		--[[if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
@@ -2197,6 +2207,8 @@ function SWEP:OnDrop()
 		local grav_entity = ents.Create("MegaPhyscannon")
 			grav_entity:SetPos( self:GetPos() )
 			grav_entity:SetAngles( self:GetAngles() )
+			grav_entity:SetMaterial(self:GetMaterial())
+			grav_entity:SetColor(self:GetColor())
 			grav_entity:Spawn()
 			grav_entity:Activate()
 			grav_entity:GetPhysicsObject():SetVelocity( self:GetPhysicsObject():GetVelocity() )

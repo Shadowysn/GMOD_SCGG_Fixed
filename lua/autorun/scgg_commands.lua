@@ -68,6 +68,30 @@ end--14
 
 if SERVER then
 
+local GetEnts = ents.GetAll()
+hook.Add("OnEntityCreated","SCGG_Trigger_AddOutput",function( trigger ) 
+--for _,trigger in pairs(GetEnts) do
+	if IsValid(trigger) and trigger:GetClass() == "trigger_weapon_dissolve" then
+		trigger:Fire("AddOutput", "onchargingphyscannon scgg_addon_global_env_for_weapondissolve,TurnOn")
+		trigger:Fire("AddOutput", "onchargingphyscannon weapon_physcannon,Skin,1")
+		local function EntityGlobalCheck()
+			for _,ent in pairs(GetEnts) do
+			if IsValid(ent) and ent:GetClass() == "env_global" and ent:GetName() == "scgg_addon_global_env_for_weapondissolve" then
+				return true
+			end
+			end
+			return false
+		end
+		if EntityGlobalCheck() == false then
+		local global_entity = ents.Create("env_global")
+		global_entity:SetKeyValue("globalstate", "super_phys_gun")
+		global_entity:SetName("scgg_addon_global_env_for_weapondissolve")
+		global_entity:Spawn()
+		global_entity:Activate()
+		end
+	end
+end)
+
 hook.Add("PlayerDroppedWeapon","SCGG_Weapon_CheckDrop",function( owner, wep ) 
 -- ^ Remove the other gravity gun if one is dropped.
 if GetConVar("scgg_enabled"):GetInt() >= 2 then

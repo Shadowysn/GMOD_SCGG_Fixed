@@ -89,7 +89,13 @@ function ENT:Use(activator, caller)
 	if self.Entity.Fading == true then return end
 	
 	if (activator:IsPlayer()) and not self.Planted then
+		local gun = activator:GetWeapon( "weapon_superphyscannon" )
+		if !IsValid(gun) then
 		activator:Give("weapon_superphyscannon")
+		local newgun = activator:GetWeapon( "weapon_superphyscannon" )
+		newgun:SetMaterial(self.Entity:GetMaterial())
+		newgun:SetColor(self.Entity:GetColor())
+		end
 		self.Entity:Remove()
 	end
 end
