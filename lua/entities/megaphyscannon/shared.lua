@@ -126,6 +126,7 @@ function ENT:Think()
 			core:SetAngles( self.Entity:GetAngles() )
 			core:SetParent( self.Entity )
 			core:Spawn()
+			core:Fire( "SetParentAttachment", "core", 0 )
 			core:Fire( "AddOutput","scale 1.5",0 )
 			core:Fire( "StartCharge","0.1``",0.1 )
 			

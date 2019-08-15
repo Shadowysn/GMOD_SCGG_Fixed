@@ -1,7 +1,6 @@
 SWEP.Spawnable			= true
 SWEP.AdminSpawnable		= true
 
---SWEP.ViewModel			= "models/weapons/errolliamp/c_superphyscannon.mdl"
 SWEP.ViewModel			= "models/weapons/shadowysn/c_superphyscannon.mdl"
 
 --SWEP.WorldModel		= "models/weapons/errolliamp/w_superphyscannon.mdl"
@@ -9,7 +8,7 @@ SWEP.WorldModel		= "models/weapons/shadowysn/w_superphyscannon.mdl"
 
 SWEP.UseHands = true
 SWEP.ViewModelFlip		= false
-SWEP.ViewModelFOV		= 54
+--SWEP.ViewModelFOV		= 54
 SWEP.Weight 			= 42
 SWEP.AutoSwitchTo 		= true
 SWEP.AutoSwitchFrom 		= true
@@ -17,6 +16,7 @@ SWEP.HoldType			= "physgun"
 	
 SWEP.PuntForce			= 1000000
 SWEP.HL2PuntForce		= 280000
+SWEP.PuntMultiply		= 900
 SWEP.PullForce			= 8000
 SWEP.HL2PullForce		= 800
 SWEP.HL2PullForceRagdoll	= 10000
@@ -28,7 +28,7 @@ SWEP.MaxPickupRange		= 2550--; The cone detection is not as range-perfect as tra
 SWEP.HL2MaxPickupRange	= 850
 SWEP.ConeWidth			= 0.88 -- Higher numbers make it thinner, lower numbers widen it.
 SWEP.MaxTargetHealth	= 125
-SWEP.Distance			= 45
+SWEP.GrabDistance		= 45
 	
 SWEP.Primary.ClipSize		= -1
 SWEP.Primary.DefaultClip	= -1
@@ -39,50 +39,51 @@ SWEP.Secondary.ClipSize	= -1
 SWEP.Secondary.DefaultClip	= -1
 SWEP.Secondary.Automatic	= true
 SWEP.Secondary.Ammo		= ""
-
-if (CLIENT) then
-	SWEP.PrintName			= "SUPER GRAVITY GUN"
-	SWEP.Author			= "ErrolLiamP, Î¤yler Blu, QuentinDylanP, pillow, Shadowysn"
-	SWEP.Slot			= 1
-	SWEP.SlotPos			= 0
-	SWEP.IconLetter			= "k"
-	SWEP.ViewModelFOV =		GetConVar("viewmodel_fov"):GetFloat()
-end
 	
 local HoldSound			= Sound("Weapon_MegaPhysCannon.HoldSound")
 
-util.PrecacheModel("models/weapons/errolliamp/v_megaphyscannon.mdl")
-util.PrecacheModel("models/weapons/errolliamp/w_megaphyscannon.mdl")
+util.PrecacheModel("models/weapons/shadowysn/v_megaphyscannon.mdl")
+util.PrecacheModel("models/weapons/shadowysn/w_megaphyscannon.mdl")
 util.PrecacheModel("models/props_junk/PopCan01a.mdl")
 
-function SWEP:Initialize()
-		self:SetWeaponHoldType( self.HoldType )
-		self:SetSkin(1)
-		self.ClawOpenState = false
-		self.Fade = true
-		self.Fading = false
-		self.RagdollRemoved = false
-		self.CoreAllowRemove = true
-		self.GlowAllowRemove = true
-		self.MuzzleAllowRemove = true
-		self.PrimaryFired = false
-		self.HPCollideG = COLLISION_GROUP_NONE
-		--if SERVER then
-			--util.AddNetworkString( "PlayerKilledNPC" )
-			--util.AddNetworkString( "PlayerKilledByPlayer" )
-			--util.AddNetworkString( "SCGG_OpenClaws_Client" )
-			--util.AddNetworkString( "SCGG_Holster_EnableGrav" )
-		--end
-		--[[if CLIENT then
-			net.Receive( "SCGG_OpenClaws_Client", function() 
-					
-			end )
-		end--]]
+local function DissolveEntity(entity)
+	local name = "SCGG_Dissolving_"..entity:EntIndex()
+	entity:SetName( name )
+	local debugoo = nil
+	for _,dissolver in pairs(ents.FindByName("scgg_addon_global_dissolver")) do
+		if ent:GetClass() == "env_entity_dissolver" then
+			ent:Fire("Dissolve", name, 0)
+			debugoo = true
+		end
 	end
+	print(debugoo)
+	if debugoo != true then
+	local dissolver = ents.Create("env_entity_dissolver")
+	dissolver:SetPos(Vector(0,0,0))
+	dissolver:SetKeyValue( "dissolvetype", 0 )
+	dissolver:SetName("scgg_addon_global_dissolver")
+	dissolver:Spawn()
+	dissolver:Activate()
+	dissolver:Fire("Dissolve", name, 0)
+	end
+end
+
+function SWEP:Initialize()
+	self:SetWeaponHoldType( self.HoldType )
+	self:SetSkin(1)
+	self.ClawOpenState = false
+	self.Fade = true
+	self.Fading = false
+	self.RagdollRemoved = false
+	self.CoreAllowRemove = true
+	self.PrimaryFired = false
+	self.HPCollideG = COLLISION_GROUP_NONE
+end
 	
 function SWEP:OpenClaws( boolean )
 --print("Open Claws!")
 if !IsValid(self.Owner) or !self.Owner:Alive() then return end
+	local active_string = "active"
 	local ViewModel = self.Owner:GetViewModel()
 	local WorldModel = self
 		
@@ -99,26 +100,11 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 		local pro_b_ang_pr = 20
 		local pro_23_ang_r = 60--
 		--]]
-	if (ViewModel and ViewModel:GetPoseParameter("super_active") < 1) or (WorldModel and WorldModel:GetPoseParameter("super_active") < 1) then 
+	if (ViewModel and ViewModel:GetPoseParameter(active_string) < 1) or (WorldModel and WorldModel:GetPoseParameter(active_string) < 1) then 
 	-- ^ We replace the 'active' parameter with 'super_active' in the model's qc file or else it will not work if the normal gravity gun is in player's inventory. 
-	--[[if (ViewModel and --
-	ViewModel:GetManipulateBoneAngles(prong_a).roll > pro_a1_ang_r and 
-	(ViewModel:GetManipulateBoneAngles(prong_b).pitch < pro_b_ang_pr and ViewModel:GetManipulateBoneAngles(prong_b).roll < pro_b_ang_pr) 
-	) or 
-	(WorldModel and 
-	WorldModel:GetManipulateBoneAngles(prong_1).roll > pro_a1_ang_r and 
-	WorldModel:GetManipulateBoneAngles(prong_2).roll < pro_23_ang_r and 
-	WorldModel:GetManipulateBoneAngles(prong_3).roll < pro_23_ang_r ) --
-	then --]]
 	
-		local frame = ViewModel:GetPoseParameter("super_active")
-		local worldframe = WorldModel:GetPoseParameter("super_active")
-		--[[local frame_a = ViewModel:GetManipulateBoneAngles(prong_a)--
-		local frame_b = ViewModel:GetManipulateBoneAngles(prong_b)
-		local frame_1 = WorldModel:GetManipulateBoneAngles(prong_1)
-		local frame_2 = WorldModel:GetManipulateBoneAngles(prong_2)
-		local frame_3 = WorldModel:GetManipulateBoneAngles(prong_3)--
-		--]]
+		local frame = ViewModel:GetPoseParameter(active_string)
+		local worldframe = WorldModel:GetPoseParameter(active_string)
 		timer.Remove("scgg_claw_close_delay")
 		if !timer.Exists("scgg_move_claws_open") and !timer.Exists("scgg_move_claws_close") then
 		timer.Remove("scgg_move_claws_close")
@@ -126,10 +112,10 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 		timer.Create( "scgg_move_claws_open", 0, 20, function()
 		if !IsValid(self) or !IsValid(self.Owner) or !self.Owner:Alive() then timer.Remove("scgg_move_claws_open") return end
 		if IsValid(ViewModel) then
-			if frame > 1 then ViewModel:SetPoseParameter("super_active", 1) end
+			if frame > 1 then ViewModel:SetPoseParameter(active_string, 1) end
 			--if frame >= 1 then timer.Remove("scgg_move_claws_open") return end
 			frame = frame+0.1
-			ViewModel:SetPoseParameter("super_active", frame)
+			ViewModel:SetPoseParameter(active_string, frame)
 			
 			--[[if frame_a.roll < pro_a1_ang_r then ViewModel:ManipulateBoneAngles(prong_a, Angle(frame_a.pitch, frame_a.yaw, pro_a1_ang_r)) end--
 			if frame_b.pitch > pro_b_ang_pr then ViewModel:ManipulateBoneAngles(prong_b, Angle(frame_b.pitch, frame_b.yaw, pro_b_ang_pr)) end
@@ -147,11 +133,11 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 			--net.Start("SCGG_OpenClaws_Client")
 			--net.Send(self.Owner)
 		if IsValid(WorldModel) then
-			if worldframe > 1 then WorldModel:SetPoseParameter("super_active", 1) end
+			if worldframe > 1 then WorldModel:SetPoseParameter(active_string, 1) end
 			--if worldframe >= 1 then timer.Remove("scgg_move_claws_open") return end
 			worldframe = worldframe+0.1
-			WorldModel:SetPoseParameter("super_active", worldframe)
-			if WorldModel:GetPoseParameter("super_active") >= 0.5 then
+			WorldModel:SetPoseParameter(active_string, worldframe)
+			if WorldModel:GetPoseParameter(active_string) >= 0.5 then
 				self.ClawOpenState = true
 			end
 			--[[if frame_1.roll < pro_a1_ang_r then WorldModel:ManipulateBoneAngles(prong_1, Angle(frame_1.pitch, frame_1.yaw, pro_a1_ang_r)) end--
@@ -167,11 +153,7 @@ if !IsValid(self.Owner) or !self.Owner:Alive() then return end
 			end
 		end )
 		if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel)) then timer.Remove("scgg_move_claws_open") return end
-			if (frame <= 0 or worldframe <= 0) and (!self.TP or !IsValid(self.TP)) and boolean == true then
-			--[[if ( (frame_a.roll <= pro_a1_ang_r and frame_b.pitch >= pro_b_ang_pr and frame_b.roll >= pro_b_ang_pr) or --
-			(frame_1.roll <= pro_a1_ang_r and frame_2.roll >= pro_23_ang_r and frame_3.roll >= pro_23_ang_r ) ) 
-			then --]]
-			
+		if (frame <= 0 or worldframe <= 0) and (!self.TP or !IsValid(self.TP)) and boolean == true then
 			if (!self.TP or !IsValid(self.TP)) and boolean == true then
 				self.Weapon:StopSound("Weapon_PhysCannon.CloseClaws")
 				self.Weapon:EmitSound("Weapon_PhysCannon.OpenClaws")
@@ -185,30 +167,31 @@ end
 function SWEP:CloseClaws( boolean )
 --print("Close Claws!")
 if !IsValid(self.Owner) or !self.Owner:Alive() then return end
+	local active_string = "active"
 	local ViewModel = self.Owner:GetViewModel()
 	local WorldModel = self
 	--if ViewModel and self.ClawOpenState == true then
-	if (ViewModel and ViewModel:GetPoseParameter("super_active") > 0) or (WorldModel and WorldModel:GetPoseParameter("super_active") > 0) then
-		local frame = ViewModel:GetPoseParameter("super_active")
-		local worldframe = WorldModel:GetPoseParameter("super_active")
+	if (ViewModel and ViewModel:GetPoseParameter(active_string) > 0) or (WorldModel and WorldModel:GetPoseParameter(active_string) > 0) then
+		local frame = ViewModel:GetPoseParameter(active_string)
+		local worldframe = WorldModel:GetPoseParameter(active_string)
 		if !timer.Exists("scgg_move_claws_close") and !timer.Exists("scgg_move_claws_open") then
 		timer.Remove("scgg_move_claws_open")
 		
 		timer.Create( "scgg_move_claws_close", 0.02, 20, function()
 		if !IsValid(self.Owner) or !self.Owner:Alive() then timer.Remove("scgg_move_claws_close") return end
 		if IsValid(ViewModel) then
-			if frame < 0 then ViewModel:SetPoseParameter("super_active", 0) end
+			if frame < 0 then ViewModel:SetPoseParameter(active_string, 0) end
 			--if frame <= 0 then print("doh2") timer.Remove("scgg_move_claws_close") return end
 			frame = frame-0.05
-			ViewModel:SetPoseParameter("super_active", frame)
+			ViewModel:SetPoseParameter(active_string, frame)
 			end
 		if IsValid(WorldModel) then
-			if worldframe < 0 then WorldModel:SetPoseParameter("super_active", 0) end
+			if worldframe < 0 then WorldModel:SetPoseParameter(active_string, 0) end
 			--if worldframe <= 0 then print("doh3") timer.Remove("scgg_move_claws_close") return end
 			worldframe = worldframe-0.05
-			WorldModel:SetPoseParameter("super_active", worldframe)
+			WorldModel:SetPoseParameter(active_string, worldframe)
 			end
-				if WorldModel:GetPoseParameter("super_active") < 0.5 then
+				if WorldModel:GetPoseParameter(active_string) < 0.5 then
 				self.ClawOpenState = false
 				end
 		end )
@@ -243,32 +226,221 @@ function SWEP:PuntCheck(tgt)
 	if tgt and IsValid(tgt) then
 	DistancePunt_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
 	else
-	DistancePunt_Test = self.MaxPickupRange+10
+	DistancePunt_Test = self.MaxPuntRange+10
 	end
 	if tgt and IsValid(tgt) and self.Fading != true and
 	( ( (self:AllowedClass(tgt) and tgt:GetMoveType() == MOVETYPE_VPHYSICS ) and
 	GetConVar("scgg_style"):GetInt() <= 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) 
-	or GetConVar("scgg_style"):GetInt() >= 1 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
-	or ( (  tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) )  ) or tgt:IsPlayer() or tgt:IsRagdoll() )
+	or GetConVar("scgg_style"):GetInt() > 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
+	or ( (  tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() > 0 or !self:FriendlyNPC( tgt ) )  ) or tgt:IsPlayer() or tgt:IsRagdoll() )
 	and !self:NotAllowedClass(tgt) ) 
 	and
 	( (GetConVar("scgg_style"):GetInt() <= 0 and DistancePunt_Test < self.HL2MaxPuntRange) 
-	or (GetConVar("scgg_style"):GetInt() >= 1 and DistancePunt_Test < self.MaxPuntRange) ) 
+	or (GetConVar("scgg_style"):GetInt() > 0 and DistancePunt_Test < self.MaxPuntRange) ) 
 	--and !self.Owner:KeyDown(IN_ATTACK)
 	then
 		return true
 	end
 	return false
 end
+
+function SWEP:PickupCheck(tgt)
+	local Distance_Test = 0
+	if tgt and IsValid(tgt) then
+	Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+	else
+	Distance_Test = self.MaxPickupRange+10
+	end
+	if tgt and IsValid(tgt) and self.Fading != true and
+	( ( (self:AllowedClass(tgt) and tgt:GetMoveType() == MOVETYPE_VPHYSICS ) and
+	GetConVar("scgg_style"):GetInt() <= 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) 
+	or GetConVar("scgg_style"):GetInt() > 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
+	or ( (  tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) )  ) or tgt:IsPlayer() or tgt:IsRagdoll() )
+	and !self:NotAllowedClass(tgt) ) 
+	and
+	( (GetConVar("scgg_style"):GetInt() <= 0 and Distance_Test < self.HL2MaxPickupRange) 
+	or (GetConVar("scgg_style"):GetInt() > 0 and Distance_Test < self.MaxPickupRange) ) 
+	then
+		return true
+	else
+	return false
+	end
+end
+
+function SWEP:GetConeEnt(trace)
+	local PickupRange = 0
+	if GetConVar("scgg_style"):GetInt() <= 0 then
+	PickupRange = self.HL2MaxPickupRange
+	elseif GetConVar("scgg_style"):GetInt() > 0 then
+	PickupRange = self.MaxPickupRange
+	end
+	--[[local tracerange = (trace.HitPos-trace.StartPos):Length()
+	if tracerange < PickupRange then
+		PickupRange = tracerange+30
+	end--]]
+	local function CheckEnt(cone_tbl)
+		local cone_dist_table = {}
+		--print("Before (cone_tbl):")
+		--PrintTable(cone_tbl)
+		for T,ent in pairs( cone_tbl ) do
+			if IsValid(ent) and ent != self and ent != self.Owner then
+				local trace = util.TraceHull( {
+					start = self.Owner:EyePos(),
+					endpos = ent:GetPos(),
+					maxs = Vector(8,8,8),
+					mins = -Vector(8,8,8),
+					filter = {self, self.Owner}
+				} ) -- NOTE: May sometimes not function! Try to find a fix for this
+				--print(trace.Entity)
+				if trace.Entity == ent then--and !trace.HitWorld and trace.HitNonWorld and !trace.StartSolid and !trace.AllSolid then
+					local temp_tbl = { {ent, (ent:GetPos()-self.Owner:EyePos()):Length()} }
+					table.Add(cone_dist_table, temp_tbl)
+					--print(ent, "passed!")
+				else
+					--table.remove(cone_tbl, cone_tbl[ent])
+					--cone_tbl = table.sort(cone_tbl, true)
+					--cone_dist_table = table.sort(cone_dist_table, true)
+					--print(ent, "failed!")
+				end
+			end
+		end
+		--print("After (cone_tbl):")
+		--PrintTable(cone_tbl)
+		--print("After (cone_dist_table):")
+		--PrintTable(cone_dist_table)
+		local fin_dist_table = {}
+		for _,tbl in pairs(cone_dist_table) do
+			local temp_tbl = {tbl[#tbl]}
+			table.Add(fin_dist_table, temp_tbl)
+			--PrintTable(cone_dist_table)
+			--print(tbl) print(#cone_dist_table)
+			if tbl == cone_dist_table[#cone_dist_table] then
+				local shortest_distance_entnum = table.KeyFromValue(table.SortByKey(fin_dist_table, true), 1)
+				local winning_tbl = cone_dist_table[shortest_distance_entnum]
+				local winning_ent = winning_tbl[1]
+				
+				if IsValid(winning_ent) then
+					return winning_ent
+				end
+			end
+		end
+		--[[local shortest_distance_entnum = table.KeyFromValue(table.SortByKey(cone_dist_table, true), 1) 
+		local winning_ent = cone_tbl[shortest_distance_entnum]
+		
+		if IsValid(winning_ent) then
+			return winning_ent
+		end--]]
+	end
+	
+	local combineball_cone_tbl = {}
+	local living_cone_tbl = {}
+	local rag_cone_tbl = {}
+	local other_cone_tbl = {}
+	
+	local cone = ents.FindInCone( self.Owner:EyePos(), self.Owner:GetAimVector(), PickupRange, self.ConeWidth )
+	for T,ent in pairs( cone ) do
+		if IsValid(ent) and ent != self and ent != self.Owner then
+			if ent:GetClass() == "prop_combine_ball" then
+				local temp_tbl = { ent }
+				table.Add(combineball_cone_tbl, temp_tbl)
+			elseif (ent:IsNPC() and ent:Health() > 0 and (GetConVar("scgg_friendly_fire"):GetInt() > 0 or !self:FriendlyNPC( tgt ) )) 
+			or (ent:IsPlayer() and ent:Alive()) then
+				local temp_tbl = { ent }
+				table.Add(living_cone_tbl, temp_tbl)
+			elseif ent:IsRagdoll() then
+				local temp_tbl = { ent }
+				table.Add(rag_cone_tbl, temp_tbl)
+			elseif ent:GetMoveType() == MOVETYPE_VPHYSICS or ( self:AllowedClass(ent) and !self:NotAllowedClass(ent) ) then
+				local temp_tbl = { ent }
+				table.Add(other_cone_tbl, temp_tbl)
+			end
+		end
+	end
+	if !table.IsEmpty(combineball_cone_tbl) then
+		--PrintTable(combineball_cone_tbl)
+		return CheckEnt(combineball_cone_tbl)
+	elseif !table.IsEmpty(living_cone_tbl) then
+		--PrintTable(living_cone_tbl)
+		return CheckEnt(living_cone_tbl)
+	elseif !table.IsEmpty(rag_cone_tbl) then
+		--PrintTable(rag_cone_tbl)
+		return CheckEnt(rag_cone_tbl)
+	elseif !table.IsEmpty(other_cone_tbl) then
+		--PrintTable(other_cone_tbl)
+		return CheckEnt(other_cone_tbl)
+	end
+	
+	--PrintTable(cone)
+	--PrintTable(cone_dist_table)
+	--[[for T,ent in pairs( cone ) do
+		if IsValid(ent) and ent != self and ent != self.Owner then
+			if ent:GetClass() == "prop_combine_ball" then
+			return ent
+			end
+			if (ent:IsNPC() and ent:Health() > 0) or (ent:IsPlayer() and ent:Alive()) then
+			return ent
+			end
+			if ent:IsRagdoll() or ( self:AllowedClass(ent) and !self:NotAllowedClass(ent) ) then
+			return ent
+			end
+			if ent:GetMoveType() == MOVETYPE_VPHYSICS and !self:NotAllowedClass(ent) then
+			return ent
+			end
+		end
+	end--]]
+	
+	return nil
+end
+
+function SWEP:Discharge()
+	self.Weapon:EmitSound("Weapon_Physgun.Off", 75, 100, 0.6)
+	self:CloseClaws( false )
+	--[[self.FadeCore = ents.Create("PhyscannonFade")
+	timer.Create("SCGG_FadeCore_Position", 0.10, 0, function()
+	if !IsValid(self.FadeCore) then 
+	timer.Remove("SCGG_FadeCore_Position")
+	return 
+	end
+	self.FadeCore:SetPos( self.Owner:GetShootPos() )
+	end )
+	self.FadeCore:Spawn()
+	self.FadeCore:SetParent(self.Owner)
+	self.FadeCore:SetOwner(self.Owner)--]]
+	
+	--[[timer.Simple( 0.40, function()
+	if !IsValid(self) and !IsValid(self.Weapon) then return end
+	self.Weapon:SendWeaponAnim(ACT_VM_HOLSTER)
+	end )--]]
+	timer.Simple( 0.90, function()
+	if !IsValid(self) then return end
+	--[[if IsValid(self.FadeCore) then
+		self.FadeCore:Remove()
+	end--]]
+	if IsValid(self.Owner) and self.Owner:Alive() then
+		if !self.Owner:HasWeapon( "weapon_physcannon" ) then
+		self.Owner:Give("weapon_physcannon")
+		end
+		if self.Owner:HasWeapon( "weapon_physcannon" ) and self.Owner:GetActiveWeapon() == self then
+		self.Owner:SelectWeapon("weapon_physcannon")
+		end
+	end
+		self:Remove()
+	end )
+end
 	
 function SWEP:Think()
-if GetConVar("scgg_style"):GetInt() <= 0 then
-	self.SwayScale 	= 3
-	self.BobScale 	= 1
+	if GetConVar("scgg_style"):GetInt() <= 0 then
+		self.SwayScale 	= 3
+		self.BobScale 	= 1
 	else
-	self.SwayScale 	= 1
-	self.BobScale 	= 1
-end
+		self.SwayScale 	= 1
+		self.BobScale 	= 1
+	end
+	local newview_info = self.Owner:GetInfo("cl_scgg_viewmodel")
+	if self.ViewModel != newview_info then
+		self.ViewModel = newview_info
+		self.Owner:GetViewModel():SetWeaponModel(newview_info, self)
+	end
 	if CLIENT then
 	if GetConVar("scgg_light"):GetInt() <= 0 then return end
 	if !self.Weapon:GetNWBool("Glow") then
@@ -302,55 +474,14 @@ end
 		if GetConVar("scgg_enabled"):GetInt() <= 0 and self.Fade == true then
 			self.Fade = false
 			self.Fading = true
-			self.Weapon:EmitSound("Weapon_Physgun.Off", 75, 100, 0.6)
-			self:CloseClaws( false )
-			--[[self.FadeCore = ents.Create("PhyscannonFade")
-			timer.Create("SCGG_FadeCore_Position", 0.10, 0, function()
-			if !IsValid(self.FadeCore) then 
-			timer.Remove("SCGG_FadeCore_Position")
-			return 
-			end
-			self.FadeCore:SetPos( self.Owner:GetShootPos() )
-			end )
-			self.FadeCore:Spawn()
-			self.FadeCore:SetParent(self.Owner)
-			self.FadeCore:SetOwner(self.Owner)--]]
-			
-			--[[timer.Simple( 0.40, function()
-			if !IsValid(self) and !IsValid(self.Weapon) then return end
-			self.Weapon:SendWeaponAnim(ACT_VM_HOLSTER)
-			end )--]]
-			timer.Simple( 0.90, function()
-			if !IsValid(self) then return end
-			--[[if IsValid(self.FadeCore) then
-				self.FadeCore:Remove()
-			end--]]
-			if !self.Owner:HasWeapon( "weapon_physcannon" ) then
-				self.Owner:Give("weapon_physcannon")
-			end
-			if IsValid(self.Owner) and IsValid(self) and self.Owner:GetActiveWeapon() == self then
-			self.Owner:SelectWeapon("weapon_physcannon")
-			end
-			self:Remove()
-			end )
+			self:Discharge()
 		end
 		
 		if (SERVER) then
-			if !IsValid(self.Muzzle) and self.MuzzleAllowRemove == false then
-				self.Muzzle = ents.Create("PhyscannonMuzzle")
-				self.Muzzle:SetPos( self.Owner:GetShootPos() )
-				self.Muzzle:Spawn()
-				self.Muzzle:SetParent(self.Owner)
-				self.Muzzle:SetOwner(self.Owner)
-			end
-			if IsValid(self.Muzzle) and self.MuzzleAllowRemove == true then
-				self.Muzzle:Remove()
-				self.Muzzle = nil
-			end
 			local PickupRange = 0
 			if GetConVar("scgg_style"):GetInt() <= 0 then
 			PickupRange = self.HL2MaxPickupRange
-			elseif GetConVar("scgg_style"):GetInt() >= 1 then
+			elseif GetConVar("scgg_style"):GetInt() > 0 then
 			PickupRange = self.MaxPickupRange
 			end
 			--if GetConVar("scgg_cone"):GetInt() <= 0 then
@@ -366,98 +497,34 @@ end
 		end
 		if !IsValid(self.Core) and self.CoreAllowRemove == false then
 			-- Required to directly include the code, not as a function or else it becomes a lua-error minigun.
-			self.Core = ents.Create("PhyscannonCore")
+			self.Core = ents.Create("MegaPhyscannonCore")
 			self.Core:SetPos( self.Owner:GetShootPos() )
 			self.Core:Spawn()
 			self.Core:SetParent(self.Owner)
 			self.Core:SetOwner(self.Owner)
-		end
-		if IsValid(self.Glow) then
-			self.Glow:SetPos( self.Owner:GetShootPos() )
-		end
-		if !IsValid(self.Glow) and self.GlowAllowRemove == false then
-			-- Required to directly include the code, not as a function or else it becomes a lua-error minigun.
-			self.Glow = ents.Create("PhyscannonGlow")
-			self.Weapon:SetNetworkedBool("Glow", true)
-			self.Glow:SetPos( self.Owner:GetShootPos() )
-			self.Glow:Spawn()
-			self.Glow:SetParent(self.Owner)
-			self.Glow:SetOwner(self.Owner)
+			if self.Glow then
+				self.Core:SetNWBool("SCGG_Glow", true)
+			end
 		end
 		
 		local trace = self.Owner:GetEyeTrace()
 		local tracetgt = trace.Entity
 		local tgt = NULL
 		
-		if GetConVar("scgg_cone"):GetInt() >= 1 and (!tracetgt or !tracetgt:IsValid() or tracetgt == NULL) then--(!tgt or !tgt:IsValid() or tgt == NULL) and GetConVar("scgg_cone"):GetInt() >= 1 then
-		local function GetConeEntForClaw() -- There are actually two local functions (the other being GetConeEntForClaw), as the SWEP function would glitch out. Again, sorry for making this swep a mess :(
-			local PickupRange = 0
-			if GetConVar("scgg_style"):GetInt() <= 0 then
-			PickupRange = self.HL2MaxPickupRange
-			elseif GetConVar("scgg_style"):GetInt() >= 1 then
-			PickupRange = self.MaxPickupRange
-			end
-			local tracerange = (trace.HitPos-trace.StartPos):Length()
-			if tracerange < PickupRange then
-				PickupRange = tracerange
-			end
-			local cone = ents.FindInCone( self.Owner:EyePos(), self.Owner:GetAimVector(), PickupRange, self.ConeWidth )
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ent:GetClass() == "prop_combine_ball" then
-					tgt = ent
-					return
-					end
-				end
-			end
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( (ent:IsNPC() and ent:Health() > 0) or (ent:IsPlayer() and ent:Alive()) ) then
-					tgt = ent
-					return
-					end
-				end
-			end
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( self:AllowedClass(ent) and !self:NotAllowedClass(ent) ) then
-					tgt = ent
-					return
-					end
-				end
-			end
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( ent:IsRagdoll() or ent:GetMoveType() == MOVETYPE_VPHYSICS ) then
-					tgt = ent
-					return
-					end
-				end
-			end
-			if tgt and IsValid(tgt) and tgt:IsValid() then
-				local tr_hull = util.TraceHull( { 
-					start = self.Owner:GetShootPos(),
-					endpos = self.Owner:GetShootPos() + ( self.Owner:GetAimVector() ),
-					mask = MASK_SHOT,
-					collisiongroup = COLLISION_GROUP_WORLD
-				} )
-				if ( tr_hull.StartSolid or tr_hull.AllSolid ) then--tr_hull.fraction > 1.0 or tr_hull.StartSolid or tr_hull.AllSolid ) then
-					tgt = nil
-				end
-			end
-		end
-		GetConeEntForClaw()
-		else--if GetConVar("scgg_cone"):GetInt() <= 0 then
+		if GetConVar("scgg_cone"):GetInt() > 0 and self:PickupCheck(tracetgt)==false then--and (!IsValid(self.HP)) then
+			tgt = self:GetConeEnt(trace)
+			--print(tgt)
+		else
 			tgt = tracetgt
 		end
 		
-		if ( !self.TP or !IsValid(self.TP) ) and !self.Owner:KeyDown(IN_ATTACK2) then
+		--if ( !self.TP or !IsValid(self.TP) ) and !self.Owner:KeyDown(IN_ATTACK2) then
 		
 		if self:PuntCheck(tracetgt)==true then
 			self.Weapon:SetNextPrimaryFire( CurTime() )
 		end
 		
-		end
+		--end
 		
 		if SERVER then
 		
@@ -473,12 +540,12 @@ end
 		if IsValid(tgt) and self.Fading != true and
 		( ( (self:AllowedClass(tgt) and tgt:GetMoveType() == MOVETYPE_VPHYSICS ) and
 		GetConVar("scgg_style"):GetInt() <= 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.HL2MaxMass) 
-		or GetConVar("scgg_style"):GetInt() >= 1 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
-		or ( (tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() >= 1 or !self:FriendlyNPC( tgt ) ) and tgt:Health() <= self.MaxTargetHealth) or tgt:IsPlayer() or tgt:IsRagdoll() )
+		or GetConVar("scgg_style"):GetInt() > 0 and IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():GetMass() < (self.MaxMass) )
+		or ( (tgt:IsNPC() and (GetConVar("scgg_friendly_fire"):GetInt() > 0 or !self:FriendlyNPC( tgt ) ) and tgt:Health() <= self.MaxTargetHealth) or tgt:IsPlayer() or tgt:IsRagdoll() )
 		and !self:NotAllowedClass(tgt) ) 
 		and
 		( (GetConVar("scgg_style"):GetInt() <= 0 and Distance_Test < self.HL2MaxPickupRange) 
-		or (GetConVar("scgg_style"):GetInt() >= 1 and Distance_Test < self.MaxPickupRange) ) 
+		or (GetConVar("scgg_style"):GetInt() > 0 and Distance_Test < self.MaxPickupRange) ) 
 		then
 			self:OpenClaws( true )
 		elseif self.TP and IsValid(self.TP) and self.Fading != true then
@@ -508,7 +575,6 @@ end
 		if self.Owner:KeyPressed(IN_ATTACK2) then
 			if self.Fading == true then return end
 			self:GlowEffect()
-			self:RemoveCore()
 			if IsValid(self.Zap1) then
 				self.Zap1:Remove()
 				self.Zap1 = nil
@@ -524,12 +590,10 @@ end
 		elseif self.Owner:KeyReleased(IN_ATTACK2) and (!self.TP or !IsValid(self.TP)) then
 			if self.Fading == true then return end
 			self:RemoveGlow()
-			self:RemoveCore()
-			self:CoreEffect()
 		end
 		
 		if !self.Owner:KeyDown(IN_ATTACK) then
-			if GetConVar("scgg_style"):GetInt() >= 1 then
+			if GetConVar("scgg_style"):GetInt() > 0 then
 				self.Weapon:SetNextPrimaryFire( CurTime() - 0.55 ) 
 			end
 		end
@@ -538,7 +602,7 @@ end
 			if self.Fading == true then return end
 			--if self.HP then return end   This fixes the secondary dryfire not playing
 			
-			if !tgt or !tgt:IsValid() then
+			if !IsValid(tgt) then
 				--self.Weapon:EmitSound("Weapon_PhysCannon.TooHeavy", 75, 100, 1)
 				self.Weapon:EmitSound("Weapon_PhysCannon.TooHeavy")
 				return
@@ -548,7 +612,7 @@ end
 				if tgt:GetMoveType() == MOVETYPE_VPHYSICS then
 					local getstyle = GetConVar("scgg_style"):GetInt()
 					local Mass = tgt:GetPhysicsObject():GetMass()
-					if ( getstyle == 0 and Mass >= (self.HL2MaxMass+1) ) or ( getstyle != 0 and Mass >= (self.MaxMass+1) ) then
+					if ( getstyle <= 0 and Mass >= (self.HL2MaxMass+1) ) or ( getstyle > 0 and Mass >= (self.MaxMass+1) ) then
 						--if GetConVar("scgg_style"):GetInt() <= 0 then
 						self.Weapon:EmitSound("Weapon_PhysCannon.TooHeavy")
 						return
@@ -562,6 +626,9 @@ end
 		end
 		
 		if self.TP then
+			if !IsValid(self.Owner) or !self.Owner:Alive() then
+			self:Drop()
+			end
 			if self.HP and IsValid(self.HP) then
 				if (SERVER) then
 				if !IsValid(self.TP) then self.TP = nil if self.HP and IsValid(self.HP) then self:Drop() end return end
@@ -569,7 +636,7 @@ end
 					HPrad = self.HP:BoundingRadius()--/1.5
 					if !IsValid(self.Owner) then return end
 					if !IsValid(self.TP) then return end
-					local grabpos = self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.Distance+HPrad)
+					local grabpos = self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.GrabDistance+HPrad)
 					--local grabspeedpos = self.HP:GetPos()+( grabpos/5 )
 					--[[local grabspeedpos = self.HP:GetPos():Cross( grabpos )
 					local function FindTP( entity )
@@ -607,7 +674,6 @@ end
 					end
 				end )
 				
-				self:CoreEffect()
 				self:RemoveGlow()
 				
 				if self.TP and IsValid(self.TP) then
@@ -623,7 +689,7 @@ end
 			
 			if CurTime() >= PropLockTime then
 			if (!self.HP or !IsValid(self.HP)) then self.HP = nil return end
-				if (self.HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.Distance+HPrad))):Length() >= 80 then
+				if (self.HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.GrabDistance+HPrad))):Length() >= 80 then
 					self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 					self.Owner:SetAnimation( PLAYER_ATTACK1 )
 					self:Drop()
@@ -641,18 +707,21 @@ end
 function SWEP:ZapEffect()
 	if self.Fading == true then return end
 		if SERVER then
-			if GetConVar("scgg_no_effects"):GetInt() >= 1 then return end
+			if GetConVar("scgg_no_effects"):GetInt() > 0 then return end
 			--if GetConVar("scgg_style"):GetInt() <= 1 then return end
 			if IsValid(self.Zap1) and IsValid(self.Zap2) and IsValid(self.Zap3) then return end
 			local zap_math = table.Random( { 1, 2, 3 } )
 			if zap_math == 1 and !IsValid(self.Zap1) then
-				self.Zap =  ents.Create("PhyscannonZap1")
+				self.Zap =  ents.Create("MegaPhyscannonZap")
+				--self.Zap:SetNWInt("tempent_SCGGzapmode", -1)
 				self.Zap1 = self.Zap
 			elseif zap_math == 2 and !IsValid(self.Zap2) then
-				self.Zap =  ents.Create("PhyscannonZap2")
+				self.Zap =  ents.Create("MegaPhyscannonZap")
+				self.Zap:SetNWInt("tempent_SCGGzapmode", 0)
 				self.Zap2 = self.Zap
 			elseif zap_math == 3 and !IsValid(self.Zap3) then
-				self.Zap =  ents.Create("PhyscannonZap3")
+				self.Zap =  ents.Create("MegaPhyscannonZap")
+				self.Zap:SetNWInt("tempent_SCGGzapmode", 1)
 				self.Zap3 = self.Zap
 			end
 			if IsValid(self.Zap) then
@@ -725,10 +794,9 @@ function SWEP:AllowedClass(ent)
 			or class == "prop_physics_multiplayer"
 			or class == "prop_physics_override"
 			or class == "prop_physics"
-			or class == "prop_dynamic"
-			or class == "func_brush"	then
+			or class == "prop_dynamic" then
 		return true
-		elseif !ent:IsNPC() and !ent:IsPlayer() and !ent:IsRagdoll() and GetConVar("scgg_allow_others"):GetInt() >= 1 and !self:NotAllowedClass(ent) then
+		elseif !ent:IsNPC() and !ent:IsPlayer() and !ent:IsRagdoll() and GetConVar("scgg_allow_others"):GetInt() > 0 and !self:NotAllowedClass(ent) then
 		return true
 		else
 		return false
@@ -793,7 +861,28 @@ function SWEP:AllowedCenterPhysicsClass()
 	return false
 	end
 end
-	
+
+function SWEP:SCGGDissolveEntity(entity)
+	local name = "SCGG_Dissolving_"..entity:EntIndex()
+	entity:SetName( name )
+	local check_bool = nil
+	for _,ent in pairs(ents.FindByName("scgg_addon_global_dissolver")) do
+		if ent:GetClass() == "env_entity_dissolver" then
+			ent:Fire("Dissolve", name, 0)
+			check_bool = true
+		end
+	end
+	if !check_bool then
+	local dissolver = ents.Create("env_entity_dissolver")
+	dissolver:SetPos(Vector(0,0,0))
+	dissolver:SetKeyValue( "dissolvetype", 0 )
+	dissolver:SetName("scgg_addon_global_dissolver")
+	dissolver:Spawn()
+	dissolver:Activate()
+	dissolver:Fire("Dissolve", name, 0)
+	end
+end
+
 function SWEP:PrimaryAttack()
 	if self.Fading == true or self.PrimaryFired == true then return end
 		self.Weapon:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
@@ -801,11 +890,11 @@ function SWEP:PrimaryAttack()
 		if GetConVar("scgg_style"):GetInt() <= 0 then
 		self.Weapon:SetNextPrimaryFire( CurTime() + 0.5 ) 
 		primaryfire_delay = 0.5
-		elseif GetConVar("scgg_style"):GetInt() >= 1 then
+		elseif GetConVar("scgg_style"):GetInt() > 0 then
 		self.Weapon:SetNextPrimaryFire( CurTime() + 0.55 ) 
 		primaryfire_delay = 0.55
 		end
-		if self:PuntCheck(self.Owner:GetEyeTrace().Entity)==true then
+		if self:PuntCheck(self.Owner:GetEyeTrace().Entity)==true or IsValid(self.HP) then
 			self.PrimaryFired = true
 			timer.Create( "scgg_primaryfired_timer", primaryfire_delay, 1, function() 
 				if IsValid(self.Owner) and IsValid(self.Weapon) and self.Owner:Alive() and self.Owner:GetActiveWeapon() == self then
@@ -836,10 +925,10 @@ function SWEP:PrimaryAttack()
 		local tgt = trace.Entity
 		
 		local getstyle = GetConVar("scgg_style"):GetInt()
-		if !tgt or !tgt:IsValid() or 
-		( getstyle == 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.HL2MaxPuntRange )
+		if !IsValid(tgt) or 
+		( getstyle <= 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.HL2MaxPuntRange )
 		or 
-		( getstyle != 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.MaxPuntRange )
+		( getstyle > 0 and (self.Owner:GetShootPos()-tgt:GetPos()):Length() > self.MaxPuntRange )
 		or self:NotAllowedClass(tgt) 
 		or ( tgt:IsNPC() and GetConVar("scgg_friendly_fire"):GetInt()<=0 and self:FriendlyNPC(tgt) ) then
 			self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
@@ -880,7 +969,8 @@ function SWEP:PrimaryAttack()
 						--tgt:Fire( "AddOutput", "health 0", 0 )
 						tgt:SetHealth( 0 )
 					end
-					if tgt:GetClass() != "npc_antlion_worker" then
+					if tgt:GetClass() != "npc_antlion_worker" and (tgt:GetClass() != "npc_antlion" or 
+					tgt:GetModel()!="models/antlion_worker.mdl") then
 					local dmg = DamageInfo()
 					dmg:SetDamage( tgt:Health() )
 					dmg:SetDamageForce( self.Owner:GetShootPos() )
@@ -903,6 +993,8 @@ function SWEP:PrimaryAttack()
 					self.RagdollRemoved = false
 				end
 				
+				--if tgt:GetClass() == "npc_antlion_worker" then return end
+				
 				if !IsValid(ragdoll) then
 				local newragdoll = ents.Create( "prop_ragdoll" )
 				newragdoll:SetPos( tgt:GetPos())
@@ -910,7 +1002,6 @@ function SWEP:PrimaryAttack()
 				newragdoll:SetModel( tgt:GetModel() )
 				newragdoll:SetSkin( tgt:GetSkin() )
 				newragdoll:SetColor( tgt:GetColor() )
-				newragdoll:SetName( pickedupragdoll )
 				for k,v in pairs(tgt:GetBodyGroups()) do
 					newragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
 				end
@@ -922,74 +1013,43 @@ function SWEP:PrimaryAttack()
 				end
 				
 				-- Just in case the NPC is scripted like VJ Base
-				if tgt:GetActiveWeapon():IsValid() then
+				if IsValid(tgt:GetActiveWeapon()) then
 				local wep = tgt:GetActiveWeapon()
 				--local model = wep:GetModel()
 				local wepclass = wep:GetClass()
 				
-					if tgt:IsNPC() then
-				if GetConVar("scgg_weapon_vaporize"):GetInt() <= 0 then
-				local weaponmodel = ents.Create( wepclass )
-				weaponmodel:SetPos( tgt:GetShootPos() )
-				weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-				weaponmodel:SetSkin( wep:GetSkin() )
-				weaponmodel:SetColor( wep:GetColor() )
-				weaponmodel:SetKeyValue("spawnflags","2")
-				weaponmodel:Spawn()
-				weaponmodel:Fire("Addoutput","spawnflags 0",1)
-				elseif GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
-				local weaponmodel = ents.Create( "prop_physics_override" )
-				weaponmodel:SetPos( tgt:GetShootPos() )
-				weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-				weaponmodel:SetModel( wep:GetModel() )
-				weaponmodel:SetSkin( wep:GetSkin() )
-				weaponmodel:SetColor( wep:GetColor() )
-				weaponmodel:SetCollisionGroup( COLLISION_GROUP_WEAPON )
-				weaponmodel:Spawn()
-				
-				
-				local dissolver = ents.Create( "env_entity_dissolver" )
-				dissolver:SetPos( weaponmodel:LocalToWorld(weaponmodel:OBBCenter()) )
-				dissolver:SetKeyValue( "dissolvetype", 0 )
-				dissolver:Spawn()
-				dissolver:Activate()
-				local name = "Dissolving_"..math.random()
-				weaponmodel:SetName( name )
-				dissolver:Fire( "Dissolve", name, 0 )
-				dissolver:Fire( "Kill", name, 0.10 )
-				end
-				
+				if tgt:IsNPC() then
+					if GetConVar("scgg_weapon_vaporize"):GetInt() <= 0 then
+					local weaponmodel = ents.Create( wepclass )
+					weaponmodel:SetPos( tgt:GetShootPos() )
+					weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
+					weaponmodel:SetSkin( wep:GetSkin() )
+					weaponmodel:SetColor( wep:GetColor() )
+					weaponmodel:SetKeyValue("spawnflags","2")
+					weaponmodel:Spawn()
+					weaponmodel:Fire("Addoutput","spawnflags 0",1)
+					elseif GetConVar("scgg_weapon_vaporize"):GetInt() > 0 then
+					local weaponmodel = ents.Create( "prop_physics_override" )
+					weaponmodel:SetPos( tgt:GetShootPos() )
+					weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
+					weaponmodel:SetModel( wep:GetModel() )
+					weaponmodel:SetSkin( wep:GetSkin() )
+					weaponmodel:SetColor( wep:GetColor() )
+					weaponmodel:SetCollisionGroup( COLLISION_GROUP_WEAPON )
+					weaponmodel:Spawn()
+					self:SCGGDissolveEntity(weaponmodel)
 					end
 				end
+				end
 				
-			if GetConVar("scgg_zap"):GetInt() >= 1 then
-			--[[local effect  	= EffectData()
-			if !IsValid(ragdoll) then return end
-			effect:SetOrigin(ragdoll:GetPos())
-			effect:SetStart(ragdoll:GetPos())
-			effect:SetMagnitude(5)
-			effect:SetEntity(ragdoll)
-			util.Effect("teslaHitBoxes",effect)
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
-			ragdoll:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end--]]
-			--[[timer.Create( "zapper", 0.3, 16, function()
-			local effect2  	= EffectData()
-			if !IsValid(ragdoll) then return end
-			effect2:SetOrigin(ragdoll:GetPos())
-			effect2:SetStart(ragdoll:GetPos())
-			effect2:SetMagnitude(5)
-			effect2:SetEntity(ragdoll)
-			util.Effect("teslaHitBoxes",effect2)
-			if !IsValid(ragdoll) then return end
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
-			ragdoll:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end
-			end) --]]
+			if GetConVar("scgg_zap"):GetInt() > 0 and IsValid(ragdoll) then
 			ragdoll:SCGG_RagdollZapper()
-			--ragdoll:SetNWInt("scgg_zapper_timer", 16)
 			end
+			if IsValid(ragdoll) then
 			ragdoll:SCGG_RagdollCollideTimer()
+			
+			ragdoll:SetPhysicsAttacker(self.Owner, 10)
+			ragdoll:SetCollisionGroup( self.HPCollideG )
 	
 				--tgt:DropWeapon( tgt:GetActiveWeapon() )
 				--if tgt:HasWeapon()
@@ -1000,15 +1060,23 @@ function SWEP:PrimaryAttack()
 				--else
 					ragdoll:Fire("FadeAndRemove","",120)
 				--end
+				if tgt:IsPlayer() then
+				net.Start("SCGG_Ragdoll_GetPlayerColor")
+				net.WriteInt(ragdoll:EntIndex(),32)
+				net.WriteInt(tgt:EntIndex(),32)
+				net.WriteVector(tgt:GetPlayerColor())
+				net.Send(player.GetAll())
+				end
+			end
 				
-				if self.SCGGNewRagdollFormed == true then
+				if self.SCGGNewRagdollFormed == true and IsValid(ragdoll) then
 				cleanup.Add (self.Owner, "props", ragdoll);
 				undo.Create ("Ragdoll");
 				undo.AddEntity (ragdoll);
 				undo.SetPlayer (self.Owner);
 				undo.Finish();
 				
-				--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and tgt:IsValid() then
+				--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and IsValid(tgt) then
 				net.Start( "PlayerKilledNPC" )
 				net.WriteString( tgt:GetClass() )
 				net.WriteString( self.Weapon:GetClass() )
@@ -1030,7 +1098,7 @@ function SWEP:PrimaryAttack()
 					dmg:SetInflictor( self.Weapon )
 					dmg:SetReportedPosition( self.Owner:GetShootPos() )
 					tgt:TakeDamageInfo( dmg )
-					if tgt:GetRagdollEntity():IsValid() then
+					if IsValid(tgt:GetRagdollEntity()) then
 						tgt:GetRagdollEntity():Remove()
 					end
 					tgt:SpectateEntity(ragdoll)
@@ -1049,19 +1117,13 @@ function SWEP:PrimaryAttack()
 				
 				self.Owner:AddFrags(1)
 				
-				if GetConVar("scgg_zap"):GetInt() >= 1 then
+				if GetConVar("scgg_zap"):GetInt() > 0 and IsValid(ragdoll) then
 				ragdoll:Fire("StartRagdollBoogie","",0) end
 				--ragdoll:Fire("SetBodygroup","15",0)
 				--timer.Remove( "SCGG_Ragdoll_Collision_Timer" )
-				ragdoll:SetCollisionGroup( self.HPCollideG )
-				--timer.Create( "SCGG_Ragdoll_Collision_Timer", 2, 1, function() 
-					--if ragdoll:IsValid() then
-						--ragdoll:SetCollisionGroup(COLLISION_GROUP_WEAPON)
-					--end
-				--end )
-				ragdoll:SetPhysicsAttacker(self.Owner, 10)
 				
 				--RagdollVisual(ragdoll, 1)
+						if IsValid(ragdoll) then
 				for i = 1, ragdoll:GetPhysicsObjectCount() do
 					local bone = ragdoll:GetPhysicsObjectNum(i)
 					
@@ -1079,12 +1141,13 @@ function SWEP:PrimaryAttack()
 							
 							bone:AddVelocity(self.Owner:GetAimVector()*(13000/8))--/(ragdoll:GetPhysicsObject():GetMass()/200)) 
 							else
-							bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/(ragdoll:GetPhysicsObject():GetMass()/200)) 
+							bone:AddVelocity(self.Owner:GetAimVector()*(ragdoll:GetPhysicsObject():GetMass()*self.PuntMultiply)) 
 							end
 							end
 						end )
 					end
 				end
+						end
 			end
 			
 			end
@@ -1095,6 +1158,15 @@ function SWEP:PrimaryAttack()
 			self:Visual()
 			FadeScreen()
 			--self:DoSparks()
+		end
+		if tgt:GetClass() == "npc_antlion_grub" then
+			tgt:Fire("Squash","",0)
+		end
+		
+		if tgt:GetMoveType() == MOVETYPE_VPHYSICS and IsValid(tgt:GetPhysicsObject()) and 
+		tgt:GetPhysicsObject():IsMotionEnabled() == false and 
+		(tgt:HasSpawnFlags(64) or tgt:HasSpawnFlags(131072)) then
+			tgt:GetPhysicsObject():EnableMotion( true )
 		end
 		
 		--if self:AllowedClass(tgt) or tgt:GetClass() == "prop_vehicle_airboat" or tgt:GetClass() == "prop_vehicle_jeep" and tgt:GetPhysicsObject():IsMoveable() then
@@ -1120,8 +1192,8 @@ function SWEP:PrimaryAttack()
 				tgt:SetOwner(self.Owner)
 				else
 				
-				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.HL2PuntForce/(tgt:GetPhysicsObject():GetMass()/400)) --1000000
-				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.HL2PuntForce/(tgt:GetPhysicsObject():GetMass()/400), position )
+				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*(tgt:GetPhysicsObject():GetMass()*self.PuntMultiply)) --1000000
+				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*(tgt:GetPhysicsObject():GetMass()*self.PuntMultiply), position )
 				end
 				
 				else
@@ -1131,8 +1203,8 @@ function SWEP:PrimaryAttack()
 				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector(), position )
 				tgt:SetOwner(self.Owner)
 				else
-				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.PuntForce/8)
-				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.PuntForce/8, position )
+				tgt:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*(tgt:GetPhysicsObject():GetMass()*self.PuntMultiply))
+				tgt:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*(tgt:GetPhysicsObject():GetMass()*self.PuntMultiply), position )
 				end
 				
 				end 
@@ -1179,35 +1251,11 @@ function SWEP:PrimaryAttack()
 				end--]]
 				tgt:SetPhysicsAttacker(self.Owner, 10)
 				
-				if GetConVar("scgg_zap"):GetInt() >= 1 then
+				if GetConVar("scgg_zap"):GetInt() > 0 then
 				tgt:Fire("StartRagdollBoogie","",0) end
 				--RagdollVisual(tgt, 1)
 				
-			if GetConVar("scgg_zap"):GetInt() >= 1 then
-			--[[local effect  	= EffectData()
-			if !IsValid(tgt) then return end
-			effect:SetOrigin(tgt:GetPos())
-			effect:SetStart(tgt:GetPos())
-			effect:SetMagnitude(5)
-			effect:SetEntity(tgt)
-			util.Effect("teslaHitBoxes",effect)
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
-			tgt:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end--]]
-			--[[timer.Create( "zapper", 0.3, 16, function()
-			if IsValid(tgt) then
-			local effect2  	= EffectData()
-			effect2:SetOrigin(tgt:GetPos())
-			effect2:SetStart(tgt:GetPos())
-			effect2:SetMagnitude(5)
-			effect2:SetEntity(tgt)
-			util.Effect("teslaHitBoxes",effect2)
-			end
-			if !IsValid(tgt) then return end
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
-			tgt:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end
-			end) --]]
+			if GetConVar("scgg_zap"):GetInt() > 0 then
 			tgt:SCGG_RagdollZapper()
 			end
 			tgt:SCGG_RagdollCollideTimer()
@@ -1218,7 +1266,7 @@ function SWEP:PrimaryAttack()
 					if bone and bone.IsValid and bone:IsValid() then
 					if GetConVar("scgg_style"):GetInt() <= 0 then
 						bone:AddVelocity(self.Owner:GetAimVector()*(10000/8)) else--/(tgt:GetPhysicsObject():GetMass()/200)) else
-						bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/8) 
+						bone:AddVelocity(self.Owner:GetAimVector()*(tgt:GetPhysicsObject():GetMass()*self.PuntMultiply)) 
 						end
 					end
 				end
@@ -1226,7 +1274,7 @@ function SWEP:PrimaryAttack()
 				--timer.Remove( "SCGG_Ragdoll_Collision_Timer" )
 				tgt:SetCollisionGroup( self.HPCollideG )
 				--[[timer.Create( "SCGG_Ragdoll_Collision_Timer", 2, 1, function() 
-					if tgt:IsValid() then
+					if IsValid(tgt) then
 					tgt:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 					end
 				end )--]]
@@ -1282,11 +1330,10 @@ function SWEP:DropAndShoot()
 		end
 		
 		self.Secondary.Automatic = true
-		if GetConVar("scgg_style"):GetInt() >= 1 then
+		if GetConVar("scgg_style"):GetInt() > 0 then
 		self.Weapon:SetNextSecondaryFire( CurTime() + 0.5 );
 		self.Weapon:SetNextPrimaryFire( CurTime() + 0.55 ); end
 		
-		self:CoreEffect()
 		self:RemoveGlow()
 		self:Visual()
 		self:TPrem()
@@ -1330,7 +1377,7 @@ function SWEP:DropAndShoot()
 			--dmginfo:SetDamageType( DMG_SHOCK )
 		--dmginfo:SetDamagePosition( tr.HitPos )
 
-			if GetConVar("scgg_zap"):GetInt() >= 1 then
+			if GetConVar("scgg_zap"):GetInt() > 0 then
 			self.HP:Fire("StartRagdollBoogie","",0) end
 			--RagdollVisual(self.HP, 1)
 			
@@ -1338,22 +1385,7 @@ function SWEP:DropAndShoot()
 				local bone = self.HP:GetPhysicsObjectNum(i)
 				
 				if bone and bone.IsValid and bone:IsValid() then
-			if GetConVar("scgg_zap"):GetInt() >= 1 then
-			--[[local effect  	= EffectData()
-			if !IsValid(self.HP) then return end
-			effect:SetOrigin(self.HP:GetPos())
-			effect:SetStart(self.HP:GetPos())
-			effect:SetMagnitude(5)
-			effect:SetEntity(self.HP)
-			util.Effect("teslaHitBoxes",effect)--]]
-			--self.HP:EmitSound("Weapon_StunStick.Activate")
-			--[[timer.Create( "zapper", 0.3, 16, function()
-			util.Effect("teslaHitBoxes",effect)
-			if !IsValid(self.HP) then self.HP = nil return end
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
-			self.HP:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end
-			end) --]]
+			if GetConVar("scgg_zap"):GetInt() > 0 then
 			self.HP:SCGG_RagdollZapper()
 			end
 			self.HP:SCGG_RagdollCollideTimer()
@@ -1363,7 +1395,7 @@ function SWEP:DropAndShoot()
 						if GetConVar("scgg_style"):GetInt() <= 0 then
 						bone:AddVelocity(self.Owner:GetAimVector()*(20000/8))--/(self.HP:GetPhysicsObject():GetMass()/200)) else
 						else
-						bone:AddVelocity(self.Owner:GetAimVector()*self.PuntForce/8) 
+						bone:AddVelocity(self.Owner:GetAimVector()*(self.HP:GetPhysicsObject():GetMass()*self.PuntMultiply)) 
 						end
 						end
 					--end )
@@ -1382,15 +1414,15 @@ function SWEP:DropAndShoot()
 					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*480000,position ) 
 					self.HP:SetOwner(self.Owner)
 					else
-					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.HL2PuntForce/(self.HP:GetPhysicsObject():GetMass()/400)) --3500000 --500*( self.HP:GetPhysicsObject():GetMass() ) )
-					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.HL2PuntForce/(self.HP:GetPhysicsObject():GetMass()/400) ,position ) 
+					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*(self.HP:GetPhysicsObject():GetMass()*self.PuntMultiply)) --3500000 --500*( self.HP:GetPhysicsObject():GetMass() ) )
+					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*(self.HP:GetPhysicsObject():GetMass()*self.PuntMultiply) ,position ) 
 					end
 					
 					else
 					
 					if self.HP:GetClass() == "prop_combine_ball" then
-					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.PuntForce/0.25)
-					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.PuntForce/0.25,position )
+					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.PuntForce/0.125)
+					self.HP:GetPhysicsObject():ApplyForceOffset(self.Owner:GetAimVector()*self.PuntForce/0.125,position )
 					self.HP:SetOwner(self.Owner)
 					else
 					self.HP:GetPhysicsObject():ApplyForceCenter(self.Owner:GetAimVector()*self.PuntForce)
@@ -1428,67 +1460,10 @@ function SWEP:SecondaryAttack()
 		local tracetgt = trace.Entity
 		local tgt = NULL
 		
-		if GetConVar("scgg_cone"):GetInt() >= 1 then--(!tgt or !tgt:IsValid() or tgt == NULL) and GetConVar("scgg_cone"):GetInt() >= 1 then
-		local function GetConeEnt() -- There are actually two local functions (the other being GetConeEntForClaw), as the SWEP function would glitch out. Again, sorry for making this swep a mess :(
-			local PickupRange = 0
-			if GetConVar("scgg_style"):GetInt() <= 0 then
-			PickupRange = self.HL2MaxPickupRange
-			elseif GetConVar("scgg_style"):GetInt() >= 1 then
-			PickupRange = self.MaxPickupRange
-			end
-			local tracerange = (trace.HitPos-trace.StartPos):Length()
-			if tracerange < PickupRange then
-				PickupRange = tracerange+30
-			end
-			
-			local cone = ents.FindInCone( self.Owner:EyePos(), self.Owner:GetAimVector(), PickupRange, self.ConeWidth )
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ent:GetClass() == "prop_combine_ball" then
-					tgt = ent
-					return
-					end
-				end
-			end
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( (ent:IsNPC() and ent:Health() > 0) or (ent:IsPlayer() and ent:Alive()) ) then
-					tgt = ent
-					return
-					end
-				end
-			end
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( self:AllowedClass(ent) and !self:NotAllowedClass(ent) ) then
-					tgt = ent
-					return
-					end
-				end
-			end
-			for T,ent in pairs( cone ) do
-				if IsValid(ent) and ent:IsValid() and ent != self.Owner then
-					if ( ent:IsRagdoll() or ent:GetMoveType() == MOVETYPE_VPHYSICS ) then
-					tgt = ent
-					return
-					end
-				end
-			end
-			if tgt and IsValid(tgt) and tgt:IsValid() then
-				local tr_hull = util.TraceHull( { 
-					start = self.Owner:GetShootPos(),
-					endpos = self.Owner:GetShootPos() + ( self.Owner:GetAimVector() ),
-					mask = MASK_SHOT,
-					collisiongroup = COLLISION_GROUP_WORLD
-				} )
-				if ( tr_hull.StartSolid or tr_hull.AllSolid ) then--tr_hull.fraction > 1.0 or tr_hull.StartSolid or tr_hull.AllSolid ) then
-					tgt = nil
-				end
-			end
-		end
-		GetConeEnt()
-		
-		--[[if !tgt or !tgt:IsValid() then return end
+		if GetConVar("scgg_cone"):GetInt() > 0 and self:PickupCheck(tracetgt)==false then--and !IsValid(self.HP) then
+			tgt = self:GetConeEnt(trace)
+			--print(tgt)
+		--[[if !IsValid(tgt) then return end
 		local utiltrace = util.TraceLine( { 
 			start = trace.StartPos,
 			endpos = tgt:GetPos(),
@@ -1497,14 +1472,13 @@ function SWEP:SecondaryAttack()
 		if (utiltrace.FractionLeftSolid > 0) then
 			return
 		end--]]
-		
-		elseif GetConVar("scgg_cone"):GetInt() <= 0 then
+		else--if GetConVar("scgg_cone"):GetInt() <= 0 then
 			tgt = tracetgt
 		end
 		
 		--self:CloseClaws( false )
 		
-		if !tgt or !tgt:IsValid() then
+		if !IsValid(tgt) then
 			return
 		end
 		local getstyle = GetConVar("scgg_style"):GetInt()
@@ -1513,14 +1487,14 @@ function SWEP:SecondaryAttack()
 		( ( tgt:IsNPC() or tgt:IsPlayer() ) and tgt:Health() > self.MaxTargetHealth ) 
 		or ( tgt:IsNPC() and tgt:GetClass() == "npc_bullseye" )
 		or ( (tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and !util.IsValidRagdoll(tgt:GetModel()) and !util.IsValidProp(tgt:GetModel()) ) 
-		--or ( tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and ( getstyle <= 0 and tgt:GetMass() > self.HL2MaxMass or getstyle >= 1 and tgt:GetMass() > self.MaxMass ) -- Non-functioning
+		--or ( tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and ( getstyle <= 0 and tgt:GetMass() > self.HL2MaxMass or getstyle > 0 and tgt:GetMass() > self.MaxMass ) -- Non-functioning
 		then return end
 		
 		if !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) then
 			if (SERVER) then
 				local Dist = (tgt:GetPos()-self.Owner:GetPos()):Length()
 				if GetConVar("scgg_style"):GetInt() <= 0 and Dist >= self.HL2MaxPickupRange
-				or GetConVar("scgg_style"):GetInt() >= 1 and Dist >= self.MaxPickupRange 
+				or GetConVar("scgg_style"):GetInt() > 0 and Dist >= self.MaxPickupRange 
 				then return end
 				if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
 				--if tgt:IsPlayer() and server_settings.Int( "sbox_plpldamage" ) == 1 then
@@ -1528,7 +1502,7 @@ function SWEP:SecondaryAttack()
 					--return
 				--end
 				
-				if tgt:IsNPC() and ( GetConVar("scgg_friendly_fire"):GetInt()>=1 or !self:FriendlyNPC(tgt) ) or tgt:IsPlayer() then
+				if tgt:IsNPC() and ( GetConVar("scgg_friendly_fire"):GetInt() > 0 or !self:FriendlyNPC(tgt) ) or tgt:IsPlayer() then
 					
 					if tgt:IsPlayer() then
 						if tgt:Health() > 0 then
@@ -1555,7 +1529,8 @@ function SWEP:SecondaryAttack()
 					if tgt:Health() >= 1 then
 						tgt:SetHealth( 0 )
 					end
-					if tgt:GetClass() != "npc_antlion_worker" then
+					if tgt:GetClass() != "npc_antlion_worker" and (tgt:GetClass() != "npc_antlion" or 
+					tgt:GetModel()!="models/antlion_worker.mdl") then
 					local dmg = DamageInfo()
 					dmg:SetDamage( tgt:Health() )
 					dmg:SetDamageForce( self.Owner:GetShootPos() )
@@ -1578,7 +1553,10 @@ function SWEP:SecondaryAttack()
 					end
 					
 					if tgt:Health() >= 1 then return end
-					if !IsValid(ragdoll) then
+					
+					if !IsValid(ragdoll) 
+					--and tgt:GetClass() != "npc_antlion_worker" 
+					then
 					local newragdoll = ents.Create( "prop_ragdoll" )
 					newragdoll:SetPos( tgt:GetPos())
 					newragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
@@ -1596,49 +1574,39 @@ function SWEP:SecondaryAttack()
 					self.SCGGNewRagdollFormed = true
 					end
 					
-					if tgt:GetActiveWeapon():IsValid() then
+					if IsValid(tgt:GetActiveWeapon()) then
 						local wep = tgt:GetActiveWeapon()
 						--local model = wep:GetModel()
 						local wepclass = wep:GetClass()
 						
-							if tgt:IsNPC() then
-						if GetConVar("scgg_weapon_vaporize"):GetInt() <= 0 then
-						local weaponmodel = ents.Create( wepclass )
-						weaponmodel:SetPos( tgt:GetShootPos() )
-						weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-						--if model:IsValid() then
-						--weaponmodel:SetModel( model )
-						--end
-						weaponmodel:SetSkin( wep:GetSkin() )
-						weaponmodel:SetColor( wep:GetColor() )
-						weaponmodel:SetKeyValue("spawnflags","2")
-						weaponmodel:Spawn()
-						weaponmodel:Fire("Addoutput","spawnflags 0",1)
-						
-						elseif GetConVar("scgg_weapon_vaporize"):GetInt() >= 1 then
-						local weaponmodel = ents.Create( "prop_physics_override" )
-						weaponmodel:SetPos( tgt:GetShootPos() )
-						weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-						weaponmodel:SetModel( wep:GetModel() )
-						weaponmodel:SetSkin( wep:GetSkin() )
-						weaponmodel:SetColor( wep:GetColor() )
-						weaponmodel:SetCollisionGroup( COLLISION_GROUP_WEAPON )
-						weaponmodel:Spawn()
-						
-						local dissolver = ents.Create( "env_entity_dissolver" )
-						dissolver:SetPos( weaponmodel:LocalToWorld(weaponmodel:OBBCenter()) )
-						dissolver:SetKeyValue( "dissolvetype", 0 )
-						dissolver:Spawn()
-						dissolver:Activate()
-						local name = "Dissolving_"..math.random()
-						weaponmodel:SetName( name )
-						dissolver:Fire( "Dissolve", name, 0 )
-						dissolver:Fire( "Kill", name, 0.10 )
+						if tgt:IsNPC() then
+							if GetConVar("scgg_weapon_vaporize"):GetInt() <= 0 then
+							local weaponmodel = ents.Create( wepclass )
+							weaponmodel:SetPos( tgt:GetShootPos() )
+							weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
+							--if IsValid(model) then
+							--weaponmodel:SetModel( model )
+							--end
+							weaponmodel:SetSkin( wep:GetSkin() )
+							weaponmodel:SetColor( wep:GetColor() )
+							weaponmodel:SetKeyValue("spawnflags","2")
+							weaponmodel:Spawn()
+							weaponmodel:Fire("Addoutput","spawnflags 0",1)
+							elseif GetConVar("scgg_weapon_vaporize"):GetInt() > 0 then
+							local weaponmodel = ents.Create( "prop_physics_override" )
+							weaponmodel:SetPos( tgt:GetShootPos() )
+							weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
+							weaponmodel:SetModel( wep:GetModel() )
+							weaponmodel:SetSkin( wep:GetSkin() )
+							weaponmodel:SetColor( wep:GetColor() )
+							weaponmodel:SetCollisionGroup( COLLISION_GROUP_WEAPON )
+							weaponmodel:Spawn()
+							self:SCGGDissolveEntity(weaponmodel)
+							end
 						end
 					end
-							end
 					
-					if self.SCGGNewRagdollFormed == true then
+					if self.SCGGNewRagdollFormed == true and IsValid(ragdoll) then
 					cleanup.Add (self.Owner, "props", ragdoll);
 					undo.Create ("Ragdoll");
 					undo.AddEntity (ragdoll);
@@ -1646,7 +1614,7 @@ function SWEP:SecondaryAttack()
 					undo.SetCustomUndoText( "Undone Ragdoll" )
 					undo.Finish();
 					
-					--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and tgt:IsValid() then
+					--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and IsValid(tgt) then
 					net.Start( "PlayerKilledNPC" )
 					net.WriteString( tgt:GetClass() )
 					net.WriteString( self.Weapon:GetClass() )
@@ -1668,7 +1636,7 @@ function SWEP:SecondaryAttack()
 						dmg:SetInflictor( self.Weapon )
 						dmg:SetReportedPosition( self.Owner:GetShootPos() )
 						tgt:TakeDamageInfo( dmg )
-						if tgt:GetRagdollEntity():IsValid() then
+						if IsValid(tgt:GetRagdollEntity()) then
 							tgt:GetRagdollEntity():Remove()
 						end
 						tgt:SpectateEntity(ragdoll)
@@ -1681,14 +1649,22 @@ function SWEP:SecondaryAttack()
 					self.HP = ragdoll
 					
 					self.Weapon:SetNextSecondaryFire( CurTime() + 0.2 );
-					if GetConVar("scgg_style"):GetInt() >= 1 then
+					if GetConVar("scgg_style"):GetInt() > 0 then
 					self.Weapon:SetNextPrimaryFire( CurTime() + 0.1 ); end
 					self.Secondary.Automatic = false
 					
 					self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 					self.Owner:SetAnimation( PLAYER_ATTACK1 )
 					
-					if self.SCGGNewRagdollFormed == true then
+					if tgt:IsPlayer() then
+					net.Start("SCGG_Ragdoll_GetPlayerColor")
+					net.WriteInt(ragdoll:EntIndex(),32)
+					net.WriteInt(tgt:EntIndex(),32)
+					net.WriteVector(tgt:GetPlayerColor())
+					net.Send(player.GetAll())
+					end
+					
+					if self.SCGGNewRagdollFormed == true and IsValid(ragdoll) then
 					for i = 1, ragdoll:GetPhysicsObjectCount() do
 					local bone = ragdoll:GetPhysicsObjectNum(i)
 					
@@ -1712,6 +1688,13 @@ function SWEP:SecondaryAttack()
 		
 		if tgt:GetMoveType() == MOVETYPE_VPHYSICS then
 			if (SERVER) then
+				if IsValid(tgt:GetPhysicsObject()) and tgt:GetPhysicsObject():IsMotionEnabled() == false then
+					if (tgt:HasSpawnFlags(64) or tgt:HasSpawnFlags(131072)) then
+						tgt:GetPhysicsObject():EnableMotion( true )
+					else
+						return
+					end
+				end
 				local Mass = tgt:GetPhysicsObject():GetMass()
 				local Dist = (tgt:GetPos()-self.Owner:GetPos()):Length()
 				local GetPullForce = {}
@@ -1725,23 +1708,24 @@ function SWEP:SecondaryAttack()
 				
 				if GetConVar("scgg_style"):GetInt() <= 0 then
 				local getstyle = GetConVar("scgg_style"):GetInt()
-				if ( ( getstyle == 0 and Mass >= (self.HL2MaxMass+1) ) or ( getstyle != 0 and Mass >= (self.MaxMass+1) ) ) and tgt:GetClass() != "prop_combine_ball" then
+				if ( ( getstyle <= 0 and Mass >= (self.HL2MaxMass+1) ) or ( getstyle > 0 and Mass >= (self.MaxMass+1) ) ) and tgt:GetClass() != "prop_combine_ball" then
 					return
 				end end
 				
 				if tgt:IsRagdoll() or self:AllowedClass(tgt) and tgt:GetPhysicsObject():IsMoveable() then--and ( !constraint.HasConstraints( tgt ) ) then
 					if GetConVar("scgg_style"):GetInt() <= 0 and Dist < self.HL2MaxPickupRange 
-					or GetConVar("scgg_style"):GetInt() >= 1 and Dist < self.MaxPickupRange then
+					or GetConVar("scgg_style"):GetInt() > 0 and Dist < self.MaxPickupRange then
 						self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 						self.Owner:SetAnimation( PLAYER_ATTACK1 )
 						self.HP = tgt
 						self.Owner:SimulateGravGunPickup( self.HP )
 						self.HPCollideG = tgt:GetCollisionGroup()
+						self.HP.EmergencyHPCollide = tgt:GetCollisionGroup()
 						tgt:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 						
 						self:Pickup()
 						self.Weapon:SetNextSecondaryFire( CurTime() + 0.2 );
-						if GetConVar("scgg_style"):GetInt() >= 1 then
+						if GetConVar("scgg_style"):GetInt() > 0 then
 						self.Weapon:SetNextPrimaryFire( CurTime() + 0.1 ); end
 						self.Secondary.Automatic = false
 					--[[elseif GetConVar("scgg_style"):GetInt() <= 0 and tgt:IsRagdoll() then
@@ -1765,6 +1749,7 @@ function SWEP:SecondaryAttack()
 	end
 	
 function SWEP:Pickup()
+		if !IsValid(self.HP) then self.Weapon:SendWeaponAnim( ACT_VM_PRIMARYATTACK ) return end
 		self.Weapon:EmitSound("Weapon_MegaPhysCannon.Pickup")
 		self.Weapon:StopSound("Weapon_PhysCannon.OpenClaws")
 		self.Weapon:StopSound("Weapon_PhysCannon.CloseClaws")
@@ -1859,28 +1844,11 @@ function SWEP:Drop()
 		
 		if self.HP:IsRagdoll() then
 			--RagdollVisual(self.HP, 1)
-			if GetConVar("scgg_zap"):GetInt() <= 1 then
-			--[[local effect  	= EffectData()
-			if !IsValid(self.HP) then return end
-			effect:SetOrigin(self.HP:GetPos())
-			effect:SetStart(self.HP:GetPos())
-			effect:SetMagnitude(5)
-			effect:SetEntity(self.HP)
-			util.Effect("teslaHitBoxes",effect)
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
-			self.HP:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end--]]
-			--[[timer.Create( "zapper", 0.3, 16, function()
-			util.Effect("teslaHitBoxes",effect)
-			if !IsValid(self.HP) then self.HP = nil return end
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
-			self.HP:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
-			end
-			end) --]]
+			if GetConVar("scgg_zap"):GetInt() > 0 then
 			self.HP:SCGG_RagdollZapper()
 			end
 			self.HP:SCGG_RagdollCollideTimer()
-			if GetConVar("scgg_zap"):GetInt() >= 1 then
+			if GetConVar("scgg_zap"):GetInt() > 0 then
 			self.HP:Fire("StartRagdollBoogie","",0) 
 			end
 		end
@@ -1907,7 +1875,6 @@ function SWEP:Drop()
 			end
 		end )
 		
-		self:CoreEffect()
 		self:RemoveGlow()
 		
 		self:TPrem()
@@ -1927,7 +1894,7 @@ function SWEP:Visual()
 		self.Owner:SetAnimation( PLAYER_ATTACK1 )
 		self.Weapon:EmitSound( "Weapon_MegaPhysCannon.Launch" )
 		if SERVER then
-		if GetConVar("scgg_muzzle_flash"):GetInt() >= 1 then
+		if GetConVar("scgg_muzzle_flash"):GetInt() > 0 then
 		local Light = ents.Create("light_dynamic")
 		Light:SetKeyValue("brightness", "5")
 		Light:SetKeyValue("distance", "200")
@@ -1939,7 +1906,7 @@ function SWEP:Visual()
 		Light:Activate()
 		Light:Fire("TurnOn", "", 0)
 		self:DeleteOnRemove(Light)
-		timer.Simple(0.1,function() if self:IsValid() and Light:IsValid() then Light:Remove() end end)
+		timer.Simple(0.1,function() if IsValid(self) and IsValid(Light) then Light:Remove() end end)
 		end
 		end
 		if GetConVar("scgg_style"):GetInt() <= 0 then
@@ -1951,7 +1918,11 @@ function SWEP:Visual()
 		local trace = self.Owner:GetEyeTrace()
 		
 		local effectdata = EffectData()
+		if !IsValid(self.HP) or trace.Entity != self.HP then
 		effectdata:SetOrigin( trace.HitPos )
+		else
+		effectdata:SetOrigin( self.HP:GetPos() )
+		end
 		effectdata:SetStart( self.Owner:GetShootPos() )
 		effectdata:SetAttachment( 1 )
 		effectdata:SetEntity( self.Weapon )
@@ -1965,24 +1936,14 @@ function SWEP:Visual()
 		--trace.Entity:EmitSound("Weapon_StunStick.Activate")
 		
 		if (SERVER) then
-			if GetConVar("scgg_no_effects"):GetInt() >= 1 then return end
-			if !IsValid(self.Muzzle) then
-				self.Muzzle = ents.Create("PhyscannonMuzzle")
-				self.Muzzle:SetPos( self.Owner:GetShootPos() )
-				self.Muzzle:Spawn()
-			end
-			self.MuzzleAllowRemove = false
-			if IsValid(self.Muzzle) then
-			self.Muzzle:SetParent(self.Owner)
-			self.Muzzle:SetOwner(self.Owner)
-			end
+			if GetConVar("scgg_no_effects"):GetInt() > 0 then return end
+			self:MuzzleEffect()
 			
-			timer.Simple( 0.12,
-		function() 
-				if IsValid(self.Muzzle) then
+			--[[timer.Simple( 0.12, function() 
+				if IsValid(self) then
 				self:RemoveMuzzle()
 				end
-			end )
+			end)--]]
 		end
 		
 		local e = EffectData()
@@ -2009,7 +1970,7 @@ end--]]
 	
 --[[function RagdollVisual(ent, val) -- RagdollVisual does not seem to do anything.
 if !IsValid(ent) then return end
-			if ent:IsValid() then
+			if IsValid(ent) then
 			
 			val = val+1
 			
@@ -2019,7 +1980,7 @@ if !IsValid(ent) then return end
 			--effect:SetScale(30)
 			--effect:SetRadius(30)
 			--util.Effect("TeslaHitBoxes", effect)
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
+			if GetConVar("scgg_zap_sound"):GetInt() > 0 then
 			ent:EmitSound("Weapon_StunStick.Activate", 75, 100, 0.3)
 			end
 			
@@ -2031,7 +1992,7 @@ if !IsValid(ent) then return end
 	
 local entmeta = FindMetaTable( "Entity" )
 function entmeta:SCGG_RagdollZapper()
-	if GetConVar("scgg_zap"):GetInt() >= 1 then
+	if GetConVar("scgg_zap"):GetInt() > 0 then
 	local name = "scgg_zapper_"..self:EntIndex()
 	local ZapRepeats = 16
 	if self.SCGG_IsBeingZapped == true then timer.Adjust(self.SCGG_TimerName,0.3,ZapRepeats) return end
@@ -2045,7 +2006,7 @@ function entmeta:SCGG_RagdollZapper()
 	effect2:SetMagnitude(5)
 	effect2:SetEntity(self)
 	util.Effect("teslaHitBoxes",effect2)
-	if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
+	if GetConVar("scgg_zap_sound"):GetInt() > 0 then
 		self:EmitSound("Weapon_StunStick.Activate", 75, math.Rand(99, 101), 0.1)
 	end
 	
@@ -2072,7 +2033,7 @@ function entmeta:SCGG_RagdollZapper()
 			effect2:SetMagnitude(5)
 			effect2:SetEntity(self)
 			util.Effect("teslaHitBoxes",effect2)
-			if GetConVar("scgg_zap_sound"):GetInt() >= 1 then
+			if GetConVar("scgg_zap_sound"):GetInt() > 0 then
 			self:EmitSound("Weapon_StunStick.Activate", 75, math.Rand(99, 101), 0.1)
 			end
 			if !IsValid(self) then timer.Remove(name) return end
@@ -2119,17 +2080,28 @@ function entmeta:SCGG_RagdollCollideTimer()
 end
 
 function SWEP:Deploy()
+	--[[if SERVER then
+		--print(self.Owner:GetInfo("cl_scgg_viewmodel"))
+		local info = nil
+		info = "models/weapons/shadowysn/c_superphyscannon.mdl"
+		if self.Owner:GetInfo("cl_scgg_viewmodel") then
+			info = self.Owner:GetInfo("cl_scgg_viewmodel")
+		end
+		if util.IsValidModel(info) and !IsUselessModel(info) then -- Doesn't work :/
+			self.ViewModel = info
+		end
+	end--]]
+		
 		self.ClawOpenState = false
 		self.Fade = true
 		self.Fading = false
 		self.RagdollRemoved = false
 		self.CoreAllowRemove = true
-		self.GlowAllowRemove = true
 		self.MuzzleAllowRemove = true
 		self.PrimaryFired = false
 		--self.Weapon:SetNextPrimaryFire( CurTime() + 5 )
 		self.Weapon:SetNextSecondaryFire( CurTime() + 5 )
-		--[[if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
+		--[[if IsValid(self.Owner:GetWeapon("weapon_physcannon")) then
 			--print("yeah")
 			net.Start("SCGG_Deploy_DisableGrav")
 			net.Send( self.Owner )
@@ -2140,12 +2112,12 @@ function SWEP:Deploy()
 		local claw_mode_cvar = GetConVar("scgg_claw_mode"):GetInt()
 		if claw_mode_cvar <= 0 then
 		self:CloseClaws( false )
-		elseif claw_mode_cvar == 1 then
+		elseif (claw_mode_cvar > 0 and claw_mode_cvar < 2) then
 		self:OpenClaws( false )
 		end
 		if GetConVar("scgg_style"):GetInt() <= 0 then
 		self.Weapon:SendWeaponAnim( ACT_VM_DRAW )
-		if GetConVar("scgg_equip_sound"):GetInt() >= 1 and GetConVar("scgg_enabled"):GetInt() >= 1 then
+		if GetConVar("scgg_equip_sound"):GetInt() > 0 and GetConVar("scgg_enabled"):GetInt() > 0 then
 		self.Weapon:EmitSound("weapons/physcannon/physcannon_charge.wav") 
 		end
 		end
@@ -2168,144 +2140,199 @@ function SWEP:Deploy()
 end
 
 function SWEP:Holster()
-self:TimerDestroyAll()
---[[if SERVER then
-	if self.Owner:GetWeapon("weapon_physcannon"):IsValid() then
-		local ply = self.Owner
-		--print("yeah2")
-		net.Start("SCGG_Holster_EnableGrav")
-		net.Send( ply )
-	end
-end--]]
-self.Weapon:StopSound(HoldSound)
-self:SetPoseParameter("super_active", 0)
---if self.TP then
---self:Drop()
---end
-self.HP = nil
-		if self.TP and IsValid(self.TP) then
-			return false
-		else
-			self:RemoveFX()
-			self:TPrem()
-			if self.HP and IsValid(self.HP) then
-				self.HP = nil
-			end
-			return true
+	if IsValid(self.TP) then
+		if SERVER then
+		local index = self.Owner:EntIndex()
+		local TPIndex = self.TP:EntIndex()
+		local HPIndex = TPIndex
+		if IsValid(self.HP) then
+		HPIndex = self.HP:EntIndex()
 		end
+		timer.Simple( 0.01, function()
+			local ply = ents.GetByIndex(index)
+			local TP = ents.GetByIndex(TPIndex)
+			local HP = ents.GetByIndex(HPIndex)
+			local CollideG = HP.EmergencyHPCollide
+			if IsValid(ply) and ply:IsPlayer() and !ply:Alive() then
+				if IsValid(TP) then
+				
+					if HP != TP then
+						HP:Fire("EnablePhyscannonPickup","",1)
+						if HP:IsRagdoll() then
+							HP:SetCollisionGroup(COLLISION_GROUP_WEAPON)
+						else
+							HP:SetCollisionGroup( CollideG )
+						end
+						--HP:SetCollisionGroup(COLLISION_GROUP_NONE)
+						
+						if HP:IsRagdoll() then
+							if GetConVar("scgg_zap"):GetInt() > 0 then
+							HP:SCGG_RagdollZapper()
+							end
+							HP:SCGG_RagdollCollideTimer()
+							if GetConVar("scgg_zap"):GetInt() > 0 then
+							HP:Fire("StartRagdollBoogie","",0) 
+							end
+						end
+						
+						if HP:GetClass() == "prop_combine_ball" then
+							ply:SimulateGravGunPickup( HP )
+							timer.Simple( 0.01, function() 
+								if HP and IsValid(HP) then
+									ply:SimulateGravGunDrop( HP ) 
+								end
+							end)
+						else
+							ply:SimulateGravGunDrop( HP )
+						end
+						
+						if HP and IsValid(HP) then
+							--HP = nil
+						end
+						if CollideG then
+							CollideG = COLLISION_GROUP_NONE
+						end
+						TP:Remove()
+					end
+				end
+			end
+		end)
+		end
+	end
+	self:TimerDestroyAll()
+	--[[if SERVER then
+		if IsValid(self.Owner:GetWeapon("weapon_physcannon")) then
+			local ply = self.Owner
+			--print("yeah2")
+			net.Start("SCGG_Holster_EnableGrav")
+			net.Send( ply )
+		end
+	end--]]
+	self.Weapon:StopSound(HoldSound)
+	self:SetPoseParameter("active", 0)
+	--if self.TP then
+	--self:Drop()
+	--end
+	self.HP = nil
+	if self.TP and IsValid(self.TP) then
+		return false
+	else
+		self:RemoveCore()
+		self:TPrem()
+		if self.HP and IsValid(self.HP) then
+			self.HP = nil
+		end
+		return true
+	end
 end
 	
 function SWEP:OnDrop()
-	if GetConVar("scgg_no_effects"):GetInt() >= 1 then return end
-		self:RemoveFX()
+	if GetConVar("scgg_no_effects"):GetInt() <= 0 then
+		self:RemoveCore()
 		self:TPrem()
+		end
 		timer.Simple( 0.02, function()
 		if IsValid(self) then
 		self:Remove()
 		end
 		end )
 		local grav_entity = ents.Create("MegaPhyscannon")
-			grav_entity:SetPos( self:GetPos() )
-			grav_entity:SetAngles( self:GetAngles() )
-			grav_entity:SetMaterial(self:GetMaterial())
-			grav_entity:SetColor(self:GetColor())
-			grav_entity:Spawn()
-			grav_entity:Activate()
-			grav_entity:GetPhysicsObject():SetVelocity( self:GetPhysicsObject():GetVelocity() )
-			grav_entity:GetPhysicsObject():SetInertia( self:GetPhysicsObject():GetInertia() )
-			grav_entity.ClawOpenState = self.ClawOpenState
-			--grav_entity:GetPhysicsObject():SetVelocity( Vector( 0, 350, 0 ) )
-			--grav_entity:GetPhysicsObject():ApplyForceCenter( Vector( 0, 0, -100 ) )
-			--grav_entity:GetPhysicsObject():ApplyForceOffset( Vector( 0, 3500, 0 ) , self:GetPos() )
-			grav_entity.Planted = false
-		if self.HP and IsValid(self.HP) then
-			self.HP = nil
-		end
+		grav_entity:SetPos( self:GetPos() )
+		grav_entity:SetAngles( self:GetAngles() )
+		grav_entity:SetMaterial(self:GetMaterial())
+		grav_entity:SetColor(self:GetColor())
+		grav_entity:Spawn()
+		grav_entity:Activate()
+		grav_entity:GetPhysicsObject():SetVelocity( self:GetPhysicsObject():GetVelocity() )
+		grav_entity:GetPhysicsObject():SetInertia( self:GetPhysicsObject():GetInertia() )
+		grav_entity.ClawOpenState = self.ClawOpenState
+		--grav_entity:GetPhysicsObject():SetVelocity( Vector( 0, 350, 0 ) )
+		--grav_entity:GetPhysicsObject():ApplyForceCenter( Vector( 0, 0, -100 ) )
+		--grav_entity:GetPhysicsObject():ApplyForceOffset( Vector( 0, 3500, 0 ) , self:GetPos() )
+		grav_entity.Planted = false
+	if self.HP and IsValid(self.HP) then
+		self.HP = nil
 	end
+end
 	
 function SWEP:TPrem()
-		if self.TP then
-			if !IsValid(self.TP) then return end
-			self.TP:Remove()
-			self.TP = nil
-		end
-		
-		if self.Const then
+	if self.TP then
+		if !IsValid(self.TP) then return end
+		self.TP:Remove()
+		self.TP = nil
+	end
+	
+	if self.Const then
 		if !IsValid(self.Const) then return end
-			self.Const:Remove()
-			self.Const = nil
-		end
+		self.Const:Remove()
+		self.Const = nil
 	end
-	
-function SWEP:RemoveMuzzle()
-		if self.Muzzle then
-			if !IsValid(self.Muzzle) then return end
-			self.MuzzleAllowRemove = true
-			self.Muzzle:Remove()
-			self.Muzzle = nil
-		end
+end
+
+function SWEP:MuzzleEffect()
+	if IsValid(self.Core) and !self.Muzzle then
+		net.Start("SCGG_Core_Muzzle")
+		net.WriteEntity(self.Core)
+		net.Broadcast()
+		--self.Core:SetNWBool("SCGG_Muzzle", true)
+		--self.Muzzle = true
+		--[[timer.Simple( 0.12, function() 
+			if IsValid(self) then
+			self:RemoveMuzzle()
+			end
+		end)--]]
 	end
-	
-function SWEP:RemoveFX()
-		if self.Core then
-			if !IsValid(self.Core) then return end
-			self.CoreAllowRemove = true
-			self.Core:Remove()
-			self.Core = nil
-		end
-		if self.Glow then
-			self.GlowAllowRemove = true
-			self.Glow:Remove()
-			self.Glow = nil
-		end
+end
+
+--[[function SWEP:RemoveMuzzle()
+	if IsValid(self.Core) and self.Muzzle then
+		--self.Core:SetNWBool("SCGG_Muzzle", false)
+		--self.Muzzle = nil
 	end
-	
+end--]]
+
 function SWEP:CoreEffect()
 		if SERVER then
-		if GetConVar("scgg_no_effects"):GetInt() >= 1 then return end
-			if !IsValid(self.Core) then
-				self.Core = ents.Create("PhyscannonCore")
-				self.Core:SetPos( self.Owner:GetShootPos() )
-				self.Core:Spawn()
-				--self.Core:AddEFlags(EFL_KEEP_ON_RECREATE_ENTITIES)
-			end
-			self.CoreAllowRemove = false
-			if !IsValid(self.Core) then return end
-			self.Core:SetParent(self.Owner)
-			self.Core:SetOwner(self.Owner)
+		if GetConVar("scgg_no_effects"):GetInt() > 0 then return end
+		if !IsValid(self.Core) then
+			self.Core = ents.Create("MegaPhyscannonCore")
+			self.Core:SetPos( self.Owner:GetShootPos() )
+			self.Core:Spawn()
+			--self.Core:AddEFlags(EFL_KEEP_ON_RECREATE_ENTITIES)
 		end
+		self.CoreAllowRemove = false
+		if !IsValid(self.Core) then return end
+		self.Core:SetParent(self.Owner)
+		self.Core:SetOwner(self.Owner)
 	end
+end
 	
 function SWEP:GlowEffect()
-		if SERVER then
-		if GetConVar("scgg_no_effects"):GetInt() >= 1 then return end
-			if !IsValid(self.Glow) then
-				self.Glow = ents.Create("PhyscannonGlow")
-				self.Weapon:SetNetworkedBool("Glow", true)
-				self.Glow:SetPos( self.Owner:GetShootPos() )
-				self.Glow:Spawn()
-			end
-			self.GlowAllowRemove = false
-			self.Glow:SetParent(self.Owner)
-			self.Glow:SetOwner(self.Owner)
+	if SERVER then
+		if GetConVar("scgg_no_effects"):GetInt() > 0 then return end
+		if !IsValid(self.Core) then
+			self:CoreEffect()
 		end
+		if !IsValid(self.Core) then return end
+		self.Core:SetNWBool("SCGG_Glow", true)
+		self.Glow = true
 	end
+end
 	
 function SWEP:RemoveCore()
-		if CLIENT then return end
-		if !self.Core then return end
-		if !IsValid(self.Core) then return end
-		self.CoreAllowRemove = true
-		self.Core:Remove()
-		self.Core = nil
-	end
+	if CLIENT then return end
+	if !self.Core then return end
+	if !IsValid(self.Core) then return end
+	self.CoreAllowRemove = true
+	self.Core:Remove()
+	self.Core = nil
+end
 	
 function SWEP:RemoveGlow()
-		if CLIENT then return end
-		if !self.Glow then return end
-		if !IsValid(self.Glow) then return end
-		self.GlowAllowRemove = true
-		self.Weapon:SetNetworkedBool("Glow", false)
-		self.Glow:Remove()
-		self.Glow = nil
-	end
+	if CLIENT then return end
+	if !self.Core then return end
+	if !IsValid(self.Core) then return end
+	self.Weapon:SetNWBool("Glow", false)
+	self.Core:SetNWBool("SCGG_Glow", false)
+	self.Glow = nil
+end
