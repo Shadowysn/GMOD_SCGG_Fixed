@@ -68,3 +68,21 @@ Version 2.3+Workshop Release:
 
 Version 2.4
 * Primary delay removed as soon as a valid object enters your crosshair.
+
+[Github updating had stopped at this point, workshop version was focused on more.]
+
+Version 5.0
+* Fixed antlion workers on EP2 maps glitching out when using the weapon on them.
+* Fixed a bug where grabbed entities stay stuck in the air when a player dies holding it with the weapon.
+* Temp fix of certain frozen props on HL2 maps not being able to be picked up by the SWEP. (This will also affect props frozen by physgun)
+* Edited SWEP to not be weaker than normal gravity gun in certain situations. (mostly)
+* Fixed a bug that prevented punting.
+* Fixed scgg_enabled being unable to be set to 1 unless scgg_allow_enablecvar_modify is inactive.
+* Added two experimental client console variables: cl_scgg_viewmodel and cl_scgg_physgun_color.
+* Fixed a bug where armor values would recede into negatives when the armor drained.
+* Updated scgg_cone detection, it should no longer grab objects through walls. However, it is still far from finished.
+* Made dissolving effects use a single but consistent env_entity_dissolver rather than spawning one for every single item that needed dissolving.
+* Merged glow and muzzle entities to the main core effect entity. Originally they were all seperate entities. 
+* Viewmodel will now change by itself when cl_scgg_viewmodel is modified.
+* Fixed a bug with worldmodel effects caused by accidentally using the viewmodel's attachments in thirdperson, due to confusion with the code by the original creator.
+* Muzzle effect no longer handled in serverside.
