@@ -86,3 +86,4 @@ Version 5.0
 * Viewmodel will now change by itself when cl_scgg_viewmodel is modified.
 * Fixed a bug with worldmodel effects caused by accidentally using the viewmodel's attachments in thirdperson, due to confusion with the code by the original creator.
 * Muzzle effect no longer handled in serverside.
+* Fixed effects for incompatible viewmodels so stray sprites will no longer be floating in the last position they were.
