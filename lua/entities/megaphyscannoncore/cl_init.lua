@@ -57,12 +57,21 @@ function ENT:Draw()
 		end
 	end
 	local scale = math.Rand( 8, 10 )
-	--local scale2 = math.Rand( 25, 27 )
-	local scale2 = math.Rand( 20, 24 )
+	
+	local scalecore = math.Rand( 20, 24 ) -- Normal
+	if GetConVar("cl_scgg_effects_mode"):GetInt() >= 1 then
+		scalecore = math.Rand( 21, 26 ) -- A bit bigger
+	end
+	
 	local scale3 = math.Rand( 3, 4 )
 	local scale4 = math.Rand( 45, 47 )
 	local scale5 = math.Rand( 34, 36 )
-	local scale6 = math.Rand( 28, 35 )
+	
+	local scaleglow = math.Rand( 31, 39 ) -- Half-Life 2
+	if GetConVar("cl_scgg_effects_mode"):GetInt() >= 1 then
+		scaleglow = math.Rand( 34, 45 ) -- Half-Life 2 Survivor
+	end
+	
 	local scale7 = math.Rand( 12, 14 )
 	if !IsValid(self) or !IsValid(Owner) then return end
 	
@@ -76,7 +85,7 @@ function ENT:Draw()
 	end--]]
 	
 	if self.Muzzle then
-		if ViewModelCheck and ViewEntityCheck then
+		if ViewModelCheck and ViewEntityCheck and GetConVar("cl_scgg_effects_mode"):GetInt() < 1 then
 			StartPos = GetAttachment("muzzle", vm)
 			
 			render.SetMaterial( Mat )
@@ -101,8 +110,8 @@ function ENT:Draw()
 			StartPosLH = GetAttachment("fork2b", vm)
 			
 			render.SetMaterial( Main )
-			--CheckDrawSprite( StartPos, scale2, scale2, ColorSet(240) or Color(255,255,255,240))
-			CheckDrawSprite( StartPos, scale2, scale2, ColorSet(90) or Color(255,255,255,90))
+			--CheckDrawSprite( StartPos, scalecore, scalecore, ColorSet(240) or Color(255,255,255,240))
+			CheckDrawSprite( StartPos, scalecore, scalecore, ColorSet(90) or Color(255,255,255,90))
 			render.SetMaterial( Mat )
 			CheckDrawSprite( StartPosO, scale, scale, ColorSet(80) or Color(255,255,255,80))
 			CheckDrawSprite( StartPosL, scale, scale, ColorSet(80) or Color(255,255,255,80))
@@ -141,8 +150,13 @@ function ENT:Draw()
 			StartPosLH = GetAttachment("fork2b", vm)
 			
 			render.SetMaterial( Main )
-			--CheckDrawSprite( StartPos, scale6, scale6, ColorSet(240) or Color(255,255,255,240))
-			CheckDrawSprite( StartPos, scale6, scale6, ColorSet(80, true) or Color(255,255,255,80))
+			--CheckDrawSprite( StartPos, scaleglow, scaleglow, ColorSet(240) or Color(255,255,255,240))
+			if GetConVar("cl_scgg_effects_mode"):GetInt() >= 1 then
+			CheckDrawSprite( StartPos, scaleglow, scaleglow, ColorSet(50, true) or Color(255,255,255,35)) -- Half-Life 2 Survivor
+			CheckDrawSprite( StartPos, scalecore, scalecore, ColorSet(90) or Color(255,255,255,90)) -- Half-Life 2 Survivor
+			else
+			CheckDrawSprite( StartPos, scaleglow, scaleglow, ColorSet(80, true) or Color(255,255,255,80)) -- Half-Life 2
+			end
 			render.SetMaterial( Mat )
 			CheckDrawSprite( StartPosO, scale, scale, ColorSet(160, true) or Color(255,255,255,160))
 			CheckDrawSprite( StartPosL, scale, scale, ColorSet(160, true) or Color(255,255,255,160))
@@ -182,6 +196,9 @@ function ENT:Draw()
 			CheckDrawSprite( StartPosLH, scale3, scale3, ColorSet(80, false) or Color(255,255,255,80))
 			CheckDrawSprite( StartPosRH, scale3, scale3, ColorSet(80, false) or Color(255,255,255,80))
 		end
+		self.Length = 10
+		self.Length2 = 10
+		self.Length3 = 10
 		if StartPosO != nil and StartPos != nil then
 		self.Length = (StartPosO - StartPos):Length()
 		end

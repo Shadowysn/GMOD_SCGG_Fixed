@@ -2,9 +2,12 @@ if (SERVER) then return end
 
 CreateClientConVar( "cl_scgg_viewmodel", "models/weapons/shadowysn/c_superphyscannon.mdl", true, true, 
 	"Set the viewmodel of your Super Gravity Gun. Does not affect worldmodel." )
-	
+
 CreateClientConVar( "cl_scgg_physgun_color", "0", true, true, 
 	"Set the glow color to your physgun's color in first-person. Third-person is not affected." )
+
+CreateClientConVar( "cl_scgg_effects_mode", "0", true, true, 
+	"Set the effect style to emulate from a game. Third-person is not affected. 0 = Half-Life 2, 1 = Half-Life 2 Survivor" )
 
 net.Receive("SCGG_Core_Muzzle", function()
 	local core = net.ReadEntity()
@@ -18,13 +21,13 @@ net.Receive("SCGG_Core_Muzzle", function()
 	end
 end)
 
-hook.Add("Think", "SCGG_Disable_Claw_Bug", function() 
+hook.Add("Think", "Grav_Disable_Claw_Bug", function() 
 	local grav = LocalPlayer():GetWeapon("weapon_physcannon")
 	if IsValid(grav) then
-		if IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "weapon_superphyscannon" then
-		grav:SetNextClientThink(CurTime() + 0.2)
-		else
+		if IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "weapon_physcannon" then
 		grav:SetNextClientThink(CurTime())
+		else
+		grav:SetNextClientThink(CurTime() + 0.2)
 		end
 	end
 end)

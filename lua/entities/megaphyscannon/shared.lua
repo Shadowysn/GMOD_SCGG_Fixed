@@ -86,7 +86,7 @@ end
    Name: Use
 ---------------------------------------------------------*/
 function ENT:Use(activator, caller)
-	if self.Entity.Fading == true then return end
+	if self.Entity.Fading then return end
 	
 	if (activator:IsPlayer()) and not self.Planted then
 		local gun = activator:GetWeapon( "weapon_superphyscannon" )
@@ -129,33 +129,29 @@ function ENT:Think()
 			core:Fire( "SetParentAttachment", "core", 0 )
 			core:Fire( "AddOutput","scale 1.5",0 )
 			core:Fire( "StartCharge","0.1``",0.1 )
+			core:Fire( "Stop","",0.7 )
+			core:Fire( "Kill","",1.7 )
 			
 			self.Entity:EmitSound("Weapon_Physgun.Off", 75, 100, 1)
 			
 			timer.Simple( 0.70, function()
-		if IsValid(self.Entity) then
-				self.Entity:SetCollisionGroup(COLLISION_GROUP_WORLD)
-				local normalgrav = ents.Create("weapon_physcannon")
-				normalgrav:SetPos( self.Entity:GetPos() )
-				normalgrav:SetAngles( self.Entity:GetPhysicsObject():GetAngles() )
-				normalgrav:SetVelocity( self.Entity:GetVelocity() )
-				normalgrav:Fire("Addoutput","spawnflags 2",0)
-				normalgrav:Fire("Addoutput","spawnflags 0",1)
-				normalgrav:Spawn()
-				normalgrav:Activate()
-				core:SetParent( normalgrav )
-				core:Fire( "Stop","0",0 )
-				core:Fire( "Kill","0",2 )
-				
-				cleanup.ReplaceEntity( self.Entity, normalgrav )
-				undo.ReplaceEntity( self.Entity, normalgrav )
-				undo.Finish();
-				timer.Simple( 0.02, function()
-					if IsValid(self.Entity) then
-					self.Entity:Remove()
-					end
-				end )
-		end
+				if IsValid(self.Entity) then
+					self.Entity:SetCollisionGroup(COLLISION_GROUP_WORLD)
+					local normalgrav = ents.Create("weapon_physcannon")
+					normalgrav:SetPos( self.Entity:GetPos() )
+					normalgrav:SetAngles( self.Entity:GetPhysicsObject():GetAngles() )
+					normalgrav:SetVelocity( self.Entity:GetPhysicsObject():GetVelocity() )
+					normalgrav:Fire("Addoutput","spawnflags 2",0)
+					normalgrav:Fire("Addoutput","spawnflags 0",1)
+					normalgrav:Spawn()
+					normalgrav:Activate()
+					core:SetParent( normalgrav )
+					
+					cleanup.ReplaceEntity( self.Entity, normalgrav )
+					undo.ReplaceEntity( self.Entity, normalgrav )
+					undo.Finish()
+					self.Entity:Fire("Kill","",0.02)
+				end
 			end )
 		end
 	self.Entity:NextThink( 0.5 )
@@ -176,9 +172,9 @@ end
 ---------------------------------------------------------*/
 function ENT:Draw()
 local Mat = Material( "sprites/blueflare1" )
-Mat:SetInt("$spriterendermode",5)
-local Zap = Material( "sprites/physcannon_bluelight1b" )
-Zap:SetInt("$spriterendermode",5)
+	Mat:SetInt("$spriterendermode",5)
+	local Zap = Material( "sprites/physcannon_bluelight1b" )
+	Zap:SetInt("$spriterendermode",5)
 	self.Entity:DrawModel()
 	
 	local ledcolor = Color(230, 45, 45, 255)

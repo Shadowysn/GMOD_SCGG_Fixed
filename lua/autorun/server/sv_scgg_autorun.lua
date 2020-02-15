@@ -37,64 +37,72 @@ local phys_string = "weapon_physcannon"
 local superphys_string = "weapon_superphyscannon"
 
 if !ConVarExists("scgg_style") then	
-   CreateConVar("scgg_style", '0', (FCVAR_ARCHIVE), "to change if the weapon is styled like Half-Life 2 or Garry's Mod.", true, true)
+   CreateConVar("scgg_style", '0', (FCVAR_ARCHIVE), "to change if the weapon is styled like Half-Life 2 or Garry's Mod.", 0, 1)
 end--1
 
 if !ConVarExists("scgg_light") then	
-   CreateConVar("scgg_light", '0', (FCVAR_ARCHIVE), "to change if the weapon emits a light.", true, true)
+   CreateConVar("scgg_light", '0', (FCVAR_ARCHIVE), "to change if the weapon emits a light.", 0, 1)
 end--2
 
 if !ConVarExists("scgg_muzzle_flash") then	
-   CreateConVar("scgg_muzzle_flash", '1', (FCVAR_ARCHIVE), "to change if the weapon emits a light when attacking.", true, true)
+   CreateConVar("scgg_muzzle_flash", '1', (FCVAR_ARCHIVE), "to change if the weapon emits a light when attacking.", 0, 1)
 end--3
 
 if !ConVarExists("scgg_zap") then	
-   CreateConVar("scgg_zap", '1', (FCVAR_ARCHIVE), "to toggle victims being electrocuted.", true, true)
+   CreateConVar("scgg_zap", '1', (FCVAR_ARCHIVE), "to toggle victims being electrocuted.", 0, 1)
 end--4
 
 if !ConVarExists("scgg_allow_others") then	
-   CreateConVar("scgg_allow_others", '0', (FCVAR_ARCHIVE), "to allow weapon interaction of other objects, including addons. (WILL have a chance to cause bugs.)", true, true)
+   CreateConVar("scgg_allow_others", '0', (FCVAR_ARCHIVE), 
+   "to allow weapon interaction of other objects, including addons. (WILL have a chance to cause bugs.)", 
+   0, 1)
 end--5
 
 if !ConVarExists("scgg_zap_sound") then	
-   CreateConVar("scgg_zap_sound", '1', (FCVAR_ARCHIVE), "to toggle electrocuted victims emitting sound.", true, true)
+   CreateConVar("scgg_zap_sound", '1', (FCVAR_ARCHIVE), "to toggle electrocuted victims emitting sound.", 0, 1)
 end--6
 
 if !ConVarExists("scgg_equip_sound") then	
-   CreateConVar("scgg_equip_sound", '0', (FCVAR_ARCHIVE), "to toggle sound emitted when deploying weapon.", true, true)
+   CreateConVar("scgg_equip_sound", '0', (FCVAR_ARCHIVE), "to toggle sound emitted when deploying weapon.", 0, 1)
 end--7
 
 if !ConVarExists("scgg_no_effects") then	
-   CreateConVar("scgg_no_effects", '0', (FCVAR_ARCHIVE), "to toggle visual effects.", true, true)
+   CreateConVar("scgg_no_effects", '0', (FCVAR_ARCHIVE), "to toggle visual effects.", 0, 1)
 end--8
 
 if !ConVarExists("scgg_enabled") then	
-   CreateConVar("scgg_enabled", '1', (FCVAR_ARCHIVE), "to toggle weapon availability. 0 = any super-charged gravity gun will revert to normal. 1 = Enable, don't do anything else. 2 = Enable, alter various settings.", true, true)
+   CreateConVar("scgg_enabled", '1', (FCVAR_ARCHIVE), 
+   "to toggle weapon availability. 0 = any super-charged gravity gun will revert to normal. 1 = Enable, don't do anything else. 2 = Enable, alter various settings.", 
+   0, 2)
 end--9
 
 if !ConVarExists("scgg_allow_enablecvar_modify") then	
-   CreateConVar("scgg_allow_enablecvar_modify", '1', (FCVAR_ARCHIVE), "to toggle whether the game can modify the status of the weapon.", true, true)
+   CreateConVar("scgg_allow_enablecvar_modify", '1', (FCVAR_ARCHIVE), "to toggle whether the game can modify the status of the weapon.", 0, 1)
 end--10
 
 if !ConVarExists("scgg_cone") then	
-   CreateConVar("scgg_cone", '0', (FCVAR_ARCHIVE), "DEBUG-TESTING; to enable grabbing objects without directly looking at them, via a cone.", true, true)
+   CreateConVar("scgg_cone", '0', (FCVAR_ARCHIVE), "to enable grabbing objects without directly looking at them, via a cone.", 0, 1)
 end--11
 
 if !ConVarExists("scgg_weapon_vaporize") then	
-   CreateConVar("scgg_weapon_vaporize", '0', (FCVAR_ARCHIVE), "to toggle map-wide dropped weapon vaporization.", true, true)
+   CreateConVar("scgg_weapon_vaporize", '0', (FCVAR_ARCHIVE), "to toggle map-wide dropped weapon vaporization.", 0, 1)
 end--12
 
 if !ConVarExists("scgg_keep_armor") then	
-   CreateConVar("scgg_keep_armor", '0', (FCVAR_ARCHIVE), "to keep armor after weapon disable. 0 = remove all armor. 1 = lower to 100. 2 = keep armor.", true, true)
+   CreateConVar("scgg_keep_armor", '0', (FCVAR_ARCHIVE), "to keep armor after weapon disable. 0 = remove all armor. 1 = lower to 100. 2 = keep armor.", 0, 2)
 end--13
 
 if !ConVarExists("scgg_friendly_fire") then	
-   CreateConVar("scgg_friendly_fire", '1', (FCVAR_ARCHIVE), "to toggle direct weapon interaction against friendly NPCs.", true, true)
+   CreateConVar("scgg_friendly_fire", '1', (FCVAR_ARCHIVE), "to toggle direct weapon interaction against friendly NPCs.", 0, 1)
 end--14
 
 if !ConVarExists("scgg_claw_mode") then	
-   CreateConVar("scgg_claw_mode", '1', (FCVAR_ARCHIVE), "to toggle claw movement options. 0 = closed. 1 = open. 2 = dynamic.", true, true)
+   CreateConVar("scgg_claw_mode", '1', (FCVAR_ARCHIVE), "to toggle claw movement options. 0 = closed. 1 = open. 2 = dynamic.", 0, 2)
 end--15
+
+if !ConVarExists("scgg_deploy_style") then	
+   CreateConVar("scgg_deploy_style", '1', (FCVAR_ARCHIVE), "to change the deploy speed. Legacy attribute from scgg_style. 0 = HL2 speed. 1 = sv_defaultdeployspeed convar.", 0, 1)
+end--16
 
 --game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 
