@@ -180,12 +180,12 @@ function SWEP:TimerDestroyAll() -- DESTROY ALL TIMERS! DESTROY ALL TIMERS!
 	timer.Remove("scgg_claw_close_delay"..self:EntIndex())
 	timer.Remove("scgg_primaryfired_timer"..self:EntIndex())
 end
-	
+
 function SWEP:OwnerChanged() -- Owner changed, idfk. I don't think it's important but eh.
 	self:TPrem()
 	self:HPrem()
 end
-	
+
 function SWEP:PuntCheck(tgt) -- Punting check, use this as if it were something like IsValid() - self:PuntCheck(entity)
 	local DistancePunt_Test = 0
 	if IsValid(tgt) then
@@ -1295,8 +1295,13 @@ function SWEP:DropAndShoot()
 		self.HP:SetCollisionGroup( self.HPCollideG )
 	end
 	self.HP:SetPhysicsAttacker(self.Owner, 10)
+	
 	--self.HP:SetNWBool("launched_by_scgg", true)
 	self.Owner:SimulateGravGunDrop( self.HP )
+	if (self.HP:GetClass() == "prop_combine_ball") then
+		self.HP:SetSaveValue("m_bLaunched", true)
+	end
+	
 	self:FadeScreen()
 	local function SCGG_Collide_Damage( entity, data )
 		if ( data.OurOldVelocity:Length() > 250 ) then 
@@ -1775,14 +1780,14 @@ function SWEP:Drop()
 	self.Secondary.Automatic = true
 	self.Weapon:EmitSound("Weapon_MegaPhysCannon.Drop")
 	self.Weapon:SetNextSecondaryFire( CurTime() + 0.5 )
-	if IsValid(self.HP) and self.HP:GetClass() == "prop_combine_ball" then
-		--self.Owner:SimulateGravGunPickup( self.HP )
-		--timer.Simple( 0.01, function() 
-			if IsValid(self.HP) then
+	--[[if IsValid(self.HP) and self.HP:GetClass() == "prop_combine_ball" then
+		self.Owner:SimulateGravGunPickup( self.HP )
+		timer.Simple( 0.01, function() 
+			if IsValid(self.HP) and IsValid(self.Owner) then
 			self.Owner:SimulateGravGunDrop( self.HP ) 
 			end
-		--end)
-	elseif IsValid(self.HP) then
+		end)
+	else--]]if IsValid(self.HP) then
 		self.Owner:SimulateGravGunDrop( self.HP )
 	end
 	
@@ -1792,6 +1797,15 @@ function SWEP:Drop()
 			self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
 		end
 	end)
+	
+	/*local HP_index = self.HP:EntIndex()
+	if self.HP:GetClass() == "prop_combine_ball" then
+		timer.Simple(0.01, function()
+			local HP_temp = ents.GetByIndex(HP_index)
+			HP_temp:GetPhysicsObject():SetVelocity(Vector(0,0,0))
+			HP_temp:GetPhysicsObject():ApplyForceCenter(Vector(math.random(360), math.random(360), math.random(360))*3000 )
+		end )
+	end*/
 	
 	self:RemoveGlow()
 	
