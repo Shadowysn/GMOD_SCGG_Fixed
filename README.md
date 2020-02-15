@@ -87,3 +87,8 @@ Version 5.0
 * Fixed a bug with worldmodel effects caused by accidentally using the viewmodel's attachments in thirdperson, due to confusion with the code by the original creator.
 * Muzzle effect no longer handled in serverside.
 * Fixed effects for incompatible viewmodels so stray sprites will no longer be floating in the last position they were.
+
+Version 5.5
+* Fixed convars not initializing, which in turn broke the whole weapon.
+* Pickup system now similar to the OG gravity gun! Pulls objects constantly towards you if they're out of range.
+* Added new convar scgg_deploy_style, for legacy attributes to scgg_style.
