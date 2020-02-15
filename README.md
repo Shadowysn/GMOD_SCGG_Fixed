@@ -92,3 +92,6 @@ Version 5.5
 * Fixed convars not initializing, which in turn broke the whole weapon.
 * Pickup system now similar to the OG gravity gun! Pulls objects constantly towards you if they're out of range.
 * Added new convar scgg_deploy_style, for legacy attributes to scgg_style.
+
+Version 5.6
+* Combine balls now bounce out in a random direction instead of staying still.
