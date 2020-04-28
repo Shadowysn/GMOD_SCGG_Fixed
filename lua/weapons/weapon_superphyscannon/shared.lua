@@ -382,7 +382,7 @@ function SWEP:Discharge() -- Revert-to-normal effect of the SCGG. Think of HL2:E
 	self.FadeCore:Spawn()
 	self.FadeCore:SetParent(self.Owner)
 	self.FadeCore:SetOwner(self.Owner)--]] -- An attempt at a fading core.
-	local coreattachmentID = nil
+	--[[local coreattachmentID = nil
 	local coreattachment = nil
 	
 	local model_base = self
@@ -405,7 +405,7 @@ function SWEP:Discharge() -- Revert-to-normal effect of the SCGG. Think of HL2:E
 		core:Fire( "Stop","",0.9 )
 		core:Fire( "Kill","",1.9 )
 		self.FadeCore = core
-	end -- NOTICE: Doesn't work. It should be more like the original game's effect, but even if it worked it'd appear weird in thirdperson + multiplayer.
+	end--]] -- NOTICE: It'd appear weird in firstperson.
 	
 	timer.Simple(0.20, function()
 		if !IsValid(self) or !IsValid(self.Weapon) then return end
