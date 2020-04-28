@@ -95,3 +95,26 @@ Version 5.5
 
 Version 5.6
 * Combine balls now bounce out in a random direction instead of staying still.
+
+[Another Github update drainage.]
+
+Version 7.0
+* Further fix of previous fix. Sorry.
+
+* Fixed scgg_enabled 0 not removing the SCGG upon deploy.
+* Added scgg_affect_players, a toggleable cvar for whether the SCGG should pick up and/or shoot players.
+* Fixed a multiplayer bug where the SCGG would fail to pick up anymore objects after picking up the first object properly.
+* Fixed bugs pertaining to dying whilst grabbing an object.
+* Fixed the damage-on-collision callback still being active on a Manhack that survived the weapon's punts.
+* Some minor bugfixes.
+
+* The SCGG's max health for targets are now 225 in HL2 or 1000 in GMOD.
+* Antlion Workers now explode (without errors) upon death instead of ragdolling from the SCGG.
+* Picking up props now uses their World Space Center instead of their actual position, fixing problems such as barrels not properly situated in the middle of the screen.
+* Ragdolls directly picked up via cursor/traces will now grab the bone that the player is looking at.
+Indirect pickups (such as scgg_cone) will still pick them up in their 0th or 1st bone, usually their pelvis.
+* Increased prop locking time to 2 seconds to prevent console props in the citadel getting released and killing the player after attempting to pick them up.
+* Tidied up the code's checks for punting/grabbing.
+* Added the punt/grab check to scgg_cone's detection, making cone detection more stable. Can't believe I didn't do this sooner...
+
+* Decreased the punt/pull force of the HL2 style by a bit.
