@@ -20,16 +20,17 @@ local function DissolveEntity(entity)
 		if ent:GetClass() == "env_entity_dissolver" then
 			ent:Fire("Dissolve", name, 0)
 			check_bool = true
+			break
 		end
 	end
 	if !check_bool then
-	local dissolver = ents.Create("env_entity_dissolver")
-	dissolver:SetPos(Vector(0,0,0))
-	dissolver:SetKeyValue( "dissolvetype", 0 )
-	dissolver:SetName("scgg_addon_global_dissolver")
-	dissolver:Spawn()
-	dissolver:Activate()
-	dissolver:Fire("Dissolve", name, 0)
+		local dissolver = ents.Create("env_entity_dissolver")
+		dissolver:SetPos(Vector(0,0,0))
+		dissolver:SetKeyValue( "dissolvetype", 0 )
+		dissolver:SetName("scgg_addon_global_dissolver")
+		dissolver:Spawn()
+		dissolver:Activate()
+		dissolver:Fire("Dissolve", name, 0)
 	end
 end
 
@@ -81,7 +82,7 @@ if !ConVarExists("scgg_allow_enablecvar_modify") then
 end--10
 
 if !ConVarExists("scgg_cone") then	
-   CreateConVar("scgg_cone", '0', (FCVAR_ARCHIVE), "to enable grabbing objects without directly looking at them, via a cone.", 0, 1)
+   CreateConVar("scgg_cone", '1', (FCVAR_ARCHIVE), "to enable grabbing objects without directly looking at them, via a cone.", 0, 1)
 end--11
 
 if !ConVarExists("scgg_weapon_vaporize") then	
@@ -104,6 +105,10 @@ if !ConVarExists("scgg_deploy_style") then
    CreateConVar("scgg_deploy_style", '1', (FCVAR_ARCHIVE), "to change the deploy speed. Legacy attribute from scgg_style. 0 = HL2 speed. 1 = sv_defaultdeployspeed convar.", 0, 1)
 end--16
 
+if !ConVarExists("scgg_affect_players") then	
+   CreateConVar("scgg_affect_players", '1', (FCVAR_ARCHIVE), "to toggle whether the weapon should affect other players.", 0, 1)
+end--17
+
 --game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 
 --if SERVER then
@@ -121,9 +126,9 @@ hook.Add("OnEntityCreated","SCGG_Trigger_AddOutput",function( trigger )
 	if IsValid(trigger) and trigger:GetClass() == "trigger_weapon_dissolve" then
 		local function EntityGlobalCheck()
 			for _,ent in pairs(GetEnts) do
-			if IsValid(ent) and ent:GetClass() == "env_global" and ent:GetName() == "scgg_addon_global_env_for_weapondissolve" then
-				return true
-			end
+				if IsValid(ent) and ent:GetClass() == "env_global" and ent:GetName() == "scgg_addon_global_env_for_weapondissolve" then
+					return true
+				end
 			end
 			return false
 		end
@@ -170,115 +175,116 @@ end
 end )
 
 hook.Add("Think","SCGG_Global_Think",function() 
--- ^ Start of think hook
-if (GetConVar("scgg_weapon_vaporize"):GetInt() > 0 and GetConVar("scgg_weapon_vaporize"):GetInt() < 2) then
--- ^ Start of vaporize cvar check
-
-	for _,wpn in pairs(ents.GetAll()) do
-		wpn.SCGG_Dissolving = false -- Dissolve check.
-		--[[if IsValid(wpn) and wpn:IsWeapon() and !wpn:GetOwner():IsValid() then
-			wpn:SetKeyValue("spawnflags","2") 
-			-- ^ I don't know what I was trying to do with this.
-		end--]]
-			if IsValid(wpn) and wpn:IsValid() and ( wpn:IsWeapon() or wpn:GetClass() == "item_ammo_ar2_altfire" ) and !wpn:CreatedByMap() and 
-			(wpn:GetClass() != phys_string and wpn:GetClass() != superphys_string) then
-			-- ^ Valid check start
-		for _, child in pairs(wpn:GetChildren()) do
-			if child:GetClass() == "env_entity_dissolver" then
-				wpn.SCGG_Dissolving = true 
-				-- ^ Mark them as dissolving so we don't repeatedly try to dissolve an already vaporizing gun.
-			end
-		end
-		
-		if GetConVar("scgg_enabled"):GetInt() >= 2 and wpn:GetClass() == "item_ammo_ar2_altfire" then 
-		-- ^ Check for scgg_enabled cvar num to be 2 and target being AR2 pulse ball ammo.
-		
-		local fakeitem = ents.Create("prop_physics_override") 
-		-- ^ Replace AR2 pulse ball ammo with fake props, as they will still be picked up when vaporizing.
-		fakeitem:SetPos( wpn:GetPos() )
-		fakeitem:SetAngles( wpn:GetAngles() )
-		fakeitem:SetModel( wpn:GetModel() )
-		fakeitem:SetSkin( wpn:GetSkin() )
-		fakeitem:SetColor( wpn:GetColor() )
-		fakeitem:SetCollisionGroup( COLLISION_GROUP_WEAPON )
-		fakeitem:Spawn()
-		fakeitem:Activate()
-		undo.ReplaceEntity( wpn, fakeitem )
-		wpn:Remove()
-		
-		DissolveEntity(fakeitem)
-		elseif !wpn:GetOwner():IsValid() and wpn.SCGG_Dissolving == false then 
-		-- ^ Check if it's not in the hands of an NPC or Player, and not being dissolved.
-		DissolveEntity(wpn)
-		end 
-		-- ^ Dissolve end.
-			end 
-			-- ^ Valid check end
-		--[[if IsValid(wpn) and wpn:IsWeapon() and !wpn:GetOwner():IsValid() and wpn.SCGG_Dissolving == false then
-		wpn:SetKeyValue("spawnflags","0")
-		-- ^ I don't know what I was trying to do with this.
-		end--]]
-	end
-end
--- ^ End of vaporize cvar check
-if (game.GetGlobalState( "super_phys_gun") == GLOBAL_ON or GetConVar("scgg_enabled"):GetInt() >= 2) then 
--- ^ Check if global state turned on and cvar is not 1
-	if GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 and game.GetGlobalState( "super_phys_gun") == GLOBAL_ON then
-	GetConVar("scgg_enabled"):SetInt(2)
-	end
+	-- ^ Start of think hook
+	if (GetConVar("scgg_weapon_vaporize"):GetInt() > 0 and GetConVar("scgg_weapon_vaporize"):GetInt() < 2) then
+	-- ^ Start of vaporize cvar check
 	
-	-- v Attempt to make gravity guns glow the physgun color, but went awry. (players were somehow affected)
-	--[[for _,physcannon in pairs(ents.GetAll()) do
-		if physcannon:GetClass(phys_string) then
-		--local supermdl = "models/weapons/errolliamp/w_superphyscannon.mdl"
-		--local mdl = "models/weapons/w_physics.mdl"
-		
-		if !IsValid( physcannon:GetOwner() ) then
-			if physcannon:GetSkin() != 1 then
-			physcannon:SetSkin( 1 )
-			end
-		elseif IsValid( physcannon:GetOwner() ) then
-			if physcannon:GetSkin() != 0 then
-			physcannon:SetSkin( 0 )
-			end
-		end
-		
-		end
-	end --]]
-	
-if GetConVar("scgg_enabled"):GetInt() >= 2 then
-	-- v Give the other variant to people that own one of them. (Notice: This only gives the scgg due to disappointing bugs)
-	for _,foundply in pairs(player.GetAll()) do
-		if foundply.SCGG_Dropping != true then
-		
-		for _,wep in pairs( foundply:GetWeapons() ) do
-			
-			if foundply:Alive() and wep:GetClass() == phys_string then
-				if !foundply:HasWeapon(superphys_string) then
-				foundply:Give(superphys_string)
+		for _,wpn in pairs(ents.GetAll()) do
+			wpn.SCGG_Dissolving = false -- Dissolve check.
+			--[[if IsValid(wpn) and wpn:IsWeapon() and !wpn:GetOwner():IsValid() then
+				wpn:SetKeyValue("spawnflags","2") 
+				-- ^ I don't know what I was trying to do with this.
+			end--]]
+				if IsValid(wpn) and wpn:IsValid() and ( wpn:IsWeapon() or wpn:GetClass() == "item_ammo_ar2_altfire" ) and !wpn:CreatedByMap() and 
+				(wpn:GetClass() != phys_string and wpn:GetClass() != superphys_string) then
+				-- ^ Valid check start
+			for _, child in pairs(wpn:GetChildren()) do
+				if child:GetClass() == "env_entity_dissolver" then
+					wpn.SCGG_Dissolving = true
+					-- ^ Mark them as dissolving so we don't repeatedly try to dissolve an already vaporizing gun.
+					break
 				end
-			--[[elseif foundply:Alive() and wep:GetClass() == superphys_string then
-				if !foundply:HasWeapon(phys_string) then
-				foundply:Give(phys_string)
-				end--]]
 			end
-		end
-		
+			
+			if GetConVar("scgg_enabled"):GetInt() >= 2 and wpn:GetClass() == "item_ammo_ar2_altfire" then 
+			-- ^ Check for scgg_enabled cvar num to be 2 and target being AR2 pulse ball ammo.
+			
+			local fakeitem = ents.Create("prop_physics_override") 
+			-- ^ Replace AR2 pulse ball ammo with fake props, as they will still be picked up when vaporizing.
+			fakeitem:SetPos( wpn:GetPos() )
+			fakeitem:SetAngles( wpn:GetAngles() )
+			fakeitem:SetModel( wpn:GetModel() )
+			fakeitem:SetSkin( wpn:GetSkin() )
+			fakeitem:SetColor( wpn:GetColor() )
+			fakeitem:SetCollisionGroup( COLLISION_GROUP_WEAPON )
+			fakeitem:Spawn()
+			fakeitem:Activate()
+			undo.ReplaceEntity( wpn, fakeitem )
+			wpn:Remove()
+			
+			DissolveEntity(fakeitem)
+			elseif !wpn:GetOwner():IsValid() and wpn.SCGG_Dissolving == false then 
+			-- ^ Check if it's not in the hands of an NPC or Player, and not being dissolved.
+			DissolveEntity(wpn)
+			end 
+			-- ^ Dissolve end.
+				end 
+				-- ^ Valid check end
+			--[[if IsValid(wpn) and wpn:IsWeapon() and !wpn:GetOwner():IsValid() and wpn.SCGG_Dissolving == false then
+			wpn:SetKeyValue("spawnflags","0")
+			-- ^ I don't know what I was trying to do with this.
+			end--]]
 		end
 	end
-end
-	-- ^ End of above for loops.
-end
-
-if (game.GetGlobalState( "super_phys_gun") == GLOBAL_OFF) and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
--- ^ Check if global state turned off and cvar is not 0
-	GetConVar("scgg_enabled"):SetInt(0)
-end
-
+	-- ^ End of vaporize cvar check
+	if (game.GetGlobalState( "super_phys_gun") == GLOBAL_ON or GetConVar("scgg_enabled"):GetInt() >= 2) then 
+	-- ^ Check if global state turned on and cvar is not 1
+		if GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 and game.GetGlobalState( "super_phys_gun") == GLOBAL_ON then
+		GetConVar("scgg_enabled"):SetInt(2)
+		end
+		
+		-- v Attempt to make gravity guns glow the physgun color, but went awry. (players were somehow affected)
+		--[[for _,physcannon in pairs(ents.GetAll()) do
+			if physcannon:GetClass(phys_string) then
+			--local supermdl = "models/weapons/errolliamp/w_superphyscannon.mdl"
+			--local mdl = "models/weapons/w_physics.mdl"
+			
+			if !IsValid( physcannon:GetOwner() ) then
+				if physcannon:GetSkin() != 1 then
+				physcannon:SetSkin( 1 )
+				end
+			elseif IsValid( physcannon:GetOwner() ) then
+				if physcannon:GetSkin() != 0 then
+				physcannon:SetSkin( 0 )
+				end
+			end
+			
+			end
+		end --]]
+		
+	if GetConVar("scgg_enabled"):GetInt() >= 2 then
+		-- v Give the other variant to people that own one of them. (Notice: This only gives the scgg due to disappointing bugs)
+		for _,foundply in pairs(player.GetAll()) do
+			if foundply.SCGG_Dropping != true then
+			
+			for _,wep in pairs( foundply:GetWeapons() ) do
+				
+				if foundply:Alive() and wep:GetClass() == phys_string then
+					if !foundply:HasWeapon(superphys_string) then
+					foundply:Give(superphys_string)
+					end
+				--[[elseif foundply:Alive() and wep:GetClass() == superphys_string then
+					if !foundply:HasWeapon(phys_string) then
+					foundply:Give(phys_string)
+					end--]]
+				end
+			end
+			
+			end
+		end
+	end
+		-- ^ End of above for loops.
+	end
+	
+	if (game.GetGlobalState( "super_phys_gun") == GLOBAL_OFF) and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
+	-- ^ Check if global state turned off and cvar is not 0
+		GetConVar("scgg_enabled"):SetInt(0)
+	end
+	
 end) 
 -- ^ End of think hook.
 
---[[hook.Add("PlayerDeath","SCGG_Weapon_Drop_OnDeath",function( ply ) -- Acts like Keep Corpses :\
+--[[hook.Add("PlayerDeath","SCGG_Weapon_Drop_OnDeath",function( ply )
 if ply:HasWeapon(superphys_string) then
 	print("yeah")
 	local phys = ply:GetWeapon(superphys_string)

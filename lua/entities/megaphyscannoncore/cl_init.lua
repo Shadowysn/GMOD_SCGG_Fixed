@@ -24,7 +24,7 @@ end
 function ENT:Think()
 end
 
-function ENT:Draw()
+function ENT:Draw(flags)
 	local Owner = self.Entity:GetOwner()
 	local vm = Owner:GetViewModel()
 	local wm = Owner:GetActiveWeapon()

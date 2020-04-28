@@ -49,17 +49,17 @@ function SWEP:DrawWorldModel()
 	self:DrawModel()
 end
 
---[[local Mat = Material( "sprites/blueflare1_noz" )
+local Mat = Material( "sprites/blueflare1_noz" )
 Mat:SetInt("$spriterendermode",5)
 local MatWorld = Material( "sprites/blueflare1" )
 MatWorld:SetInt("$spriterendermode",5)
 local Main = Material( "effects/fluttercore" )
-Main:SetInt("$spriterendermode",5)
+Main:SetInt("$spriterendermode",9)
 
-function SWEP:ViewModelDrawn(vm)
-	Mat:SetInt("$spriterendermode",5)
-	Main:SetInt("$spriterendermode",9)
-	MatWorld:SetInt("$spriterendermode",5)
+--[[function SWEP:PreDrawViewModel(vm)
+	--Mat:SetInt("$spriterendermode",5)
+	--Main:SetInt("$spriterendermode",9)
+	--MatWorld:SetInt("$spriterendermode",5)
 	local function CheckDrawSprite(position, width, height, color)
 		if position != nil and width != nil and height != nil and color != nil then
 			render.DrawSprite( position, width, height, color)
