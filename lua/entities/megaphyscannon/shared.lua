@@ -91,10 +91,10 @@ function ENT:Use(activator, caller)
 	if (activator:IsPlayer()) and not self.Planted then
 		local gun = activator:GetWeapon( "weapon_superphyscannon" )
 		if !IsValid(gun) then
-		activator:Give("weapon_superphyscannon")
-		local newgun = activator:GetWeapon( "weapon_superphyscannon" )
-		newgun:SetMaterial(self.Entity:GetMaterial())
-		newgun:SetColor(self.Entity:GetColor())
+			activator:Give("weapon_superphyscannon")
+			local newgun = activator:GetWeapon( "weapon_superphyscannon" )
+			newgun:SetMaterial(self.Entity:GetMaterial())
+			newgun:SetColor(self.Entity:GetColor())
 		end
 		self.Entity:Remove()
 	end
@@ -171,7 +171,25 @@ end
    Name: DrawPre
 ---------------------------------------------------------*/
 function ENT:Draw()
-local Mat = Material( "sprites/blueflare1" )
+	--[[local function CheckDrawSprite(position, width, height, color)
+		if position != nil and width != nil and height != nil and color != nil then
+		render.DrawSprite(position, width, height, color)
+		end
+	end
+	local function CheckDrawBeam(startPos, endPos, width, textureStart, textureEnd, color)
+		if startPos != nil and endPos != nil and width != nil and textureStart != nil and textureEnd != nil and color != nil then
+		render.DrawBeam(startPos, endPos, width, textureStart, textureEnd, color)
+		end
+	end
+	local function ColorSet(alpha)
+		if Owner:GetNWBool("SCGG_IsColored", false) then
+			local getcol = LocalPlayer():GetWeaponColor():ToColor()
+			return Color(getcol.r,getcol.g,getcol.b,alpha)
+		end
+		return nil
+	end--]]
+	
+	local Mat = Material( "sprites/blueflare1" )
 	Mat:SetInt("$spriterendermode",5)
 	local Zap = Material( "sprites/physcannon_bluelight1b" )
 	Zap:SetInt("$spriterendermode",5)
@@ -198,44 +216,44 @@ local Mat = Material( "sprites/blueflare1" )
 	
 	render.SetMaterial( Mat )
 		
-		local vm = self.Entity
-		if (!vm || vm == NULL) then return end
-		
-		local attachmentID=vm:LookupAttachment("core")
-		local attachment = vm:GetAttachment(attachmentID)
-		StartPos = attachment.Pos
-		
-		local attachmentID2=vm:LookupAttachment("fork1t")
-		local attachment_O = vm:GetAttachment( attachmentID2 )
-		StartPosO = attachment_O.Pos
-		
-		local attachmentID3=vm:LookupAttachment("fork2t")
-		local attachment_L = vm:GetAttachment( attachmentID3 )
-		StartPosL = attachment_L.Pos
-		
-		local attachmentID4=vm:LookupAttachment("fork3t")
-		local attachment_R = vm:GetAttachment( attachmentID4 )
-		StartPosR = attachment_R.Pos
-		
-		local attachmentID5=vm:LookupAttachment("fork1m")
-		local attachment_OH = vm:GetAttachment( attachmentID5 )
-		StartPosOH = attachment_OH.Pos
-		
-		local attachmentID6=vm:LookupAttachment("fork2m")
-		local attachment_LH = vm:GetAttachment( attachmentID6 )
-		StartPosLH = attachment_LH.Pos
-		
-		local attachmentID7=vm:LookupAttachment("fork3m")
-		local attachment_RH = vm:GetAttachment( attachmentID7 )
-		StartPosRH = attachment_RH.Pos
-		
-		render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,240))
-		render.DrawSprite( StartPosO, scale3, scale3, Color(255,255,255,80))
-		render.DrawSprite( StartPosL, scale3, scale3, Color(255,255,255,80))
-		render.DrawSprite( StartPosR, scale3, scale3, Color(255,255,255,80))
-		render.DrawSprite( StartPosOH, scale3, scale3, Color(255,255,255,80))
-		render.DrawSprite( StartPosLH, scale3, scale3, Color(255,255,255,80))
-		render.DrawSprite( StartPosRH, scale3, scale3, Color(255,255,255,80))
+	local vm = self.Entity
+	if (!vm || vm == NULL) then return end
+	
+	local attachmentID=vm:LookupAttachment("core")
+	local attachment = vm:GetAttachment(attachmentID)
+	StartPos = attachment.Pos
+	
+	local attachmentID2=vm:LookupAttachment("fork1t")
+	local attachment_O = vm:GetAttachment( attachmentID2 )
+	StartPosO = attachment_O.Pos
+	
+	local attachmentID3=vm:LookupAttachment("fork2t")
+	local attachment_L = vm:GetAttachment( attachmentID3 )
+	StartPosL = attachment_L.Pos
+	
+	local attachmentID4=vm:LookupAttachment("fork3t")
+	local attachment_R = vm:GetAttachment( attachmentID4 )
+	StartPosR = attachment_R.Pos
+	
+	local attachmentID5=vm:LookupAttachment("fork1m")
+	local attachment_OH = vm:GetAttachment( attachmentID5 )
+	StartPosOH = attachment_OH.Pos
+	
+	local attachmentID6=vm:LookupAttachment("fork2m")
+	local attachment_LH = vm:GetAttachment( attachmentID6 )
+	StartPosLH = attachment_LH.Pos
+	
+	local attachmentID7=vm:LookupAttachment("fork3m")
+	local attachment_RH = vm:GetAttachment( attachmentID7 )
+	StartPosRH = attachment_RH.Pos
+	
+	render.DrawSprite( StartPos, scale7, scale7, Color(255,255,255,240))
+	render.DrawSprite( StartPosO, scale3, scale3, Color(255,255,255,80))
+	render.DrawSprite( StartPosL, scale3, scale3, Color(255,255,255,80))
+	render.DrawSprite( StartPosR, scale3, scale3, Color(255,255,255,80))
+	render.DrawSprite( StartPosOH, scale3, scale3, Color(255,255,255,80))
+	render.DrawSprite( StartPosLH, scale3, scale3, Color(255,255,255,80))
+	render.DrawSprite( StartPosRH, scale3, scale3, Color(255,255,255,80))
 end
 
 end

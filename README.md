@@ -118,3 +118,20 @@ Indirect pickups (such as scgg_cone) will still pick them up in their 0th or 1st
 * Added the punt/grab check to scgg_cone's detection, making cone detection more stable. Can't believe I didn't do this sooner...
 
 * Decreased the punt/pull force of the HL2 style by a bit.
+
+Version 8.0
+Map functionality update! The following changes for the weapon strippers in Half-Life 2, Episode 1, or potentially any other map featuring them are:
+* - Fixed grab functionality after gravity gun is dropped to the ground.
+* - scgg_enabled will be set to 0 if a weapon dissolver is loaded, to try and prevent crashes.
+* - Gravity gun now uses the addon's blue model instead of just a skin change. (could be subject to change)
+* - Gravity gun now emits a charge particle effect whilst charging.
+
+Previous features...
+* Fixed a bug with grabbed props potentially getting glitched when the SCGG converts to normal. (scgg_enabled 0)
+* Added W.I.P. discharge (convert-to-normal) effect for thirdperson.
+* Fixed issues with detecting motion-disabled props, that should hopefully make cone detection finally stable enough for everyday use.
+* Thrown Manhacks with the SCGG can now kill enemies in a direct hit.
+* Fixed some repeat damage done on Manhacks.
+* Removed Punt-available on crosshair and re-added Gatling Mode, and created a seperate cvar, scgg_primary_extra to toggle. Disabled by default, enable if you want to experience the SCGG on Episode 1.
+* Updated spawnmenu settings.
+* Performance update, dynamic claws now done client-side. Should no longer suck out performance server-wise.

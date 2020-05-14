@@ -37,77 +37,82 @@ end
 local phys_string = "weapon_physcannon"
 local superphys_string = "weapon_superphyscannon"
 
-if !ConVarExists("scgg_style") then	
+if !ConVarExists("scgg_style") then//
    CreateConVar("scgg_style", '0', (FCVAR_ARCHIVE), "to change if the weapon is styled like Half-Life 2 or Garry's Mod.", 0, 1)
 end--1
 
-if !ConVarExists("scgg_light") then	
+if !ConVarExists("scgg_light") then//
    CreateConVar("scgg_light", '0', (FCVAR_ARCHIVE), "to change if the weapon emits a light.", 0, 1)
 end--2
 
-if !ConVarExists("scgg_muzzle_flash") then	
+if !ConVarExists("scgg_muzzle_flash") then//
    CreateConVar("scgg_muzzle_flash", '1', (FCVAR_ARCHIVE), "to change if the weapon emits a light when attacking.", 0, 1)
 end--3
 
-if !ConVarExists("scgg_zap") then	
+if !ConVarExists("scgg_zap") then//
    CreateConVar("scgg_zap", '1', (FCVAR_ARCHIVE), "to toggle victims being electrocuted.", 0, 1)
 end--4
 
-if !ConVarExists("scgg_allow_others") then	
+if !ConVarExists("scgg_allow_others") then//
    CreateConVar("scgg_allow_others", '0', (FCVAR_ARCHIVE), 
    "to allow weapon interaction of other objects, including addons. (WILL have a chance to cause bugs.)", 
    0, 1)
 end--5
 
-if !ConVarExists("scgg_zap_sound") then	
+if !ConVarExists("scgg_zap_sound") then//
    CreateConVar("scgg_zap_sound", '1', (FCVAR_ARCHIVE), "to toggle electrocuted victims emitting sound.", 0, 1)
 end--6
 
-if !ConVarExists("scgg_equip_sound") then	
+if !ConVarExists("scgg_equip_sound") then//
    CreateConVar("scgg_equip_sound", '0', (FCVAR_ARCHIVE), "to toggle sound emitted when deploying weapon.", 0, 1)
 end--7
 
-if !ConVarExists("scgg_no_effects") then	
+if !ConVarExists("scgg_no_effects") then//
    CreateConVar("scgg_no_effects", '0', (FCVAR_ARCHIVE), "to toggle visual effects.", 0, 1)
 end--8
 
-if !ConVarExists("scgg_enabled") then	
+if !ConVarExists("scgg_enabled") then//
    CreateConVar("scgg_enabled", '1', (FCVAR_ARCHIVE), 
    "to toggle weapon availability. 0 = any super-charged gravity gun will revert to normal. 1 = Enable, don't do anything else. 2 = Enable, alter various settings.", 
    0, 2)
 end--9
 
-if !ConVarExists("scgg_allow_enablecvar_modify") then	
-   CreateConVar("scgg_allow_enablecvar_modify", '1', (FCVAR_ARCHIVE), "to toggle whether the game can modify the status of the weapon.", 0, 1)
+if !ConVarExists("scgg_allow_enablecvar_modify") then//
+   CreateConVar("scgg_allow_enablecvar_modify", '0', (FCVAR_ARCHIVE), "to toggle whether the game can modify the status of the weapon.", 0, 1)
 end--10
 
-if !ConVarExists("scgg_cone") then	
+if !ConVarExists("scgg_cone") then//
    CreateConVar("scgg_cone", '1', (FCVAR_ARCHIVE), "to enable grabbing objects without directly looking at them, via a cone.", 0, 1)
 end--11
 
-if !ConVarExists("scgg_weapon_vaporize") then	
+if !ConVarExists("scgg_weapon_vaporize") then//
    CreateConVar("scgg_weapon_vaporize", '0', (FCVAR_ARCHIVE), "to toggle map-wide dropped weapon vaporization.", 0, 1)
 end--12
 
-if !ConVarExists("scgg_keep_armor") then	
+if !ConVarExists("scgg_keep_armor") then//
    CreateConVar("scgg_keep_armor", '0', (FCVAR_ARCHIVE), "to keep armor after weapon disable. 0 = remove all armor. 1 = lower to 100. 2 = keep armor.", 0, 2)
 end--13
 
-if !ConVarExists("scgg_friendly_fire") then	
+if !ConVarExists("scgg_friendly_fire") then//
    CreateConVar("scgg_friendly_fire", '1', (FCVAR_ARCHIVE), "to toggle direct weapon interaction against friendly NPCs.", 0, 1)
 end--14
 
-if !ConVarExists("scgg_claw_mode") then	
+if !ConVarExists("scgg_claw_mode") then//
    CreateConVar("scgg_claw_mode", '1', (FCVAR_ARCHIVE), "to toggle claw movement options. 0 = closed. 1 = open. 2 = dynamic.", 0, 2)
 end--15
 
-if !ConVarExists("scgg_deploy_style") then	
+if !ConVarExists("scgg_deploy_style") then//
    CreateConVar("scgg_deploy_style", '1', (FCVAR_ARCHIVE), "to change the deploy speed. Legacy attribute from scgg_style. 0 = HL2 speed. 1 = sv_defaultdeployspeed convar.", 0, 1)
 end--16
 
-if !ConVarExists("scgg_affect_players") then	
+if !ConVarExists("scgg_affect_players") then
    CreateConVar("scgg_affect_players", '1', (FCVAR_ARCHIVE), "to toggle whether the weapon should affect other players.", 0, 1)
 end--17
+
+if !ConVarExists("scgg_primary_extra") then
+	--CreateConVar("scgg_primary_extra", '0', (FCVAR_ARCHIVE), "to toggle extra primary fire behaviour. 0 | none. 1 | the gatling primary fire seen in HL2:EP1. 2 | punt when second object is pointed at. 3 | both", 0, 3)
+	CreateConVar("scgg_primary_extra", '0', (FCVAR_ARCHIVE), "to toggle the gatling primary fire seen in HL2:EP1.", 0, 1)
+end--18
 
 --game.SetGlobalState( "super_phys_gun", GLOBAL_ON )
 
@@ -121,28 +126,53 @@ end--17
 
 local GetEnts = ents.GetAll()
 local Has1ChangedModifyCvar = false
-hook.Add("OnEntityCreated","SCGG_Trigger_AddOutput",function( trigger ) 
+hook.Add("OnEntityCreated", "SCGG_Trigger_AddOutput", function( trigger ) 
 --for _,trigger in pairs(GetEnts) do
 	if IsValid(trigger) and trigger:GetClass() == "trigger_weapon_dissolve" then
-		local function EntityGlobalCheck()
+		if ConVarExists("scgg_enabled") and GetConVar("scgg_enabled"):GetInt() >= 2 and
+		(!ConVarExists("scgg_allow_enablecvar_modify") or GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0)
+		then
+			GetConVar("scgg_enabled"):SetInt(0)
+		end
+		
+		--[[local function EntityGlobal()
 			for _,ent in pairs(GetEnts) do
 				if IsValid(ent) and ent:GetClass() == "env_global" and ent:GetName() == "scgg_addon_global_env_for_weapondissolve" then
-					return true
+					return ent
 				end
 			end
-			return false
+			local temp = ents.Create("env_global")
+			temp:SetKeyValue("globalstate", "super_phys_gun")
+			temp:SetName("scgg_addon_global_env_for_weapondissolve")
+			temp:Spawn()
+			temp:Activate()
+			return temp
+		end--]]
+		local function EntityLua()
+			for _,ent in pairs(GetEnts) do
+				if IsValid(ent) and ent:GetClass() == "lua_run" and ent:GetName() == "scgg_addon_lua_run" then
+					return ent
+				end
+			end
+			local temp = ents.Create("lua_run")
+			temp:SetName("scgg_addon_lua_run")
+			temp:SetKeyValue( "Code", 'include("scgg_addon_lua_weaponstrip.lua")' )
+			--temp:SetKeyValue( "spawnflags", "1" )
+			temp:Spawn()
+			temp:Activate()
+			return temp
 		end
-		if EntityGlobalCheck() == false then
-		local global_entity = ents.Create("env_global")
-		global_entity:SetKeyValue("globalstate", "super_phys_gun")
-		global_entity:SetName("scgg_addon_global_env_for_weapondissolve")
-		global_entity:Spawn()
-		global_entity:Activate()
-		end
-		trigger:Fire("AddOutput", "onchargingphyscannon scgg_addon_global_env_for_weapondissolve,TurnOn")
+		
+		--EntityGlobal()
+		EntityLua()
+		
+		--trigger:Fire("AddOutput", "onchargingphyscannon scgg_addon_global_env_for_weapondissolve,TurnOn")
 		--trigger:Fire("AddOutput", "onchargingphyscannon !activator,AddOutput,spawnflags 0, 4")
-		trigger:Fire("AddOutput", "onchargingphyscannon weapon_physcannon,Skin,1")
-		trigger:Fire("AddOutput", "onchargingphyscannon weapon_physcannon,AddOutput,spawnflags 0, 8")
+		trigger:Fire("AddOutput", "onchargingphyscannon scgg_addon_lua_run,RunCode")
+		
+		--[[if game.GetMap() == "d3_citadel_03" then
+			trigger:Fire("AddOutput", "onchargingphyscannon weapon_physcannon, Use, , 10")
+		end--]]
 	end
 end)
 
@@ -230,49 +260,30 @@ hook.Add("Think","SCGG_Global_Think",function()
 	if (game.GetGlobalState( "super_phys_gun") == GLOBAL_ON or GetConVar("scgg_enabled"):GetInt() >= 2) then 
 	-- ^ Check if global state turned on and cvar is not 1
 		if GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 and game.GetGlobalState( "super_phys_gun") == GLOBAL_ON then
-		GetConVar("scgg_enabled"):SetInt(2)
+			GetConVar("scgg_enabled"):SetInt(2)
 		end
 		
-		-- v Attempt to make gravity guns glow the physgun color, but went awry. (players were somehow affected)
-		--[[for _,physcannon in pairs(ents.GetAll()) do
-			if physcannon:GetClass(phys_string) then
-			--local supermdl = "models/weapons/errolliamp/w_superphyscannon.mdl"
-			--local mdl = "models/weapons/w_physics.mdl"
-			
-			if !IsValid( physcannon:GetOwner() ) then
-				if physcannon:GetSkin() != 1 then
-				physcannon:SetSkin( 1 )
-				end
-			elseif IsValid( physcannon:GetOwner() ) then
-				if physcannon:GetSkin() != 0 then
-				physcannon:SetSkin( 0 )
-				end
-			end
-			
-			end
-		end --]]
-		
-	if GetConVar("scgg_enabled"):GetInt() >= 2 then
-		-- v Give the other variant to people that own one of them. (Notice: This only gives the scgg due to disappointing bugs)
-		for _,foundply in pairs(player.GetAll()) do
-			if foundply.SCGG_Dropping != true then
-			
-			for _,wep in pairs( foundply:GetWeapons() ) do
+		if GetConVar("scgg_enabled"):GetInt() >= 2 then
+			-- v Give the other variant to people that own one of them. (Notice: This only gives the scgg due to disappointing bugs)
+			for _,foundply in pairs(player.GetAll()) do
+				if foundply.SCGG_Dropping != true then
 				
-				if foundply:Alive() and wep:GetClass() == phys_string then
-					if !foundply:HasWeapon(superphys_string) then
-					foundply:Give(superphys_string)
+				for _,wep in pairs( foundply:GetWeapons() ) do
+					
+					if foundply:Alive() and wep:GetClass() == phys_string then
+						if !foundply:HasWeapon(superphys_string) then
+						foundply:Give(superphys_string)
+						end
+					--[[elseif foundply:Alive() and wep:GetClass() == superphys_string then
+						if !foundply:HasWeapon(phys_string) then
+						foundply:Give(phys_string)
+						end--]]
 					end
-				--[[elseif foundply:Alive() and wep:GetClass() == superphys_string then
-					if !foundply:HasWeapon(phys_string) then
-					foundply:Give(phys_string)
-					end--]]
+				end
+				
 				end
 			end
-			
-			end
 		end
-	end
 		-- ^ End of above for loops.
 	end
 	
