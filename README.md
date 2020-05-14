@@ -120,6 +120,7 @@ Indirect pickups (such as scgg_cone) will still pick them up in their 0th or 1st
 * Decreased the punt/pull force of the HL2 style by a bit.
 
 Version 8.0
+
 Map functionality update! The following changes for the weapon strippers in Half-Life 2, Episode 1, or potentially any other map featuring them are:
 * - Fixed grab functionality after gravity gun is dropped to the ground.
 * - scgg_enabled will be set to 0 if a weapon dissolver is loaded, to try and prevent crashes.
