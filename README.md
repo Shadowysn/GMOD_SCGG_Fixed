@@ -11,6 +11,17 @@ Issues tab of this github. :P
 
 Installation:
 
+-
+
+To 'Access the Steam Files':
+
+Right-click on a game, select the 'Properties' tab, then click on the Local Files tab on the window that pops up.
+It does not strictly need to be Garry's Mod.
+
+Then, click on the 'Browse Local Files' button, and a File Explorer window should pop up.
+
+-
+
 Access the Steam Files, go to steamapps/common/GarrysMod/garrysmod, and put the files into the folder. 
 Make sure to disable the other Super Gravity Gun addon from the workshop before starting up a map.
 
