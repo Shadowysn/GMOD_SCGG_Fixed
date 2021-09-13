@@ -31,8 +31,4 @@ OR
 Access the Steam Files, go to steamapps/common/GarrysMod/garrysmod/addons, and make a new folder called something like 'Super Gravity Gun'. Put the files into that created folder. 
 This method is more neater, but will require a restart if you've gotten your game open before the files were placed.
 
-Update Log from version 1 onwards:
-
-{List may or may not be accurate.}
-
 This is currently the 5 Sep @ 11:18pm version on the workshop.
