@@ -6,10 +6,21 @@ ENT.Category		= "Half-Life 2"
 ENT.Spawnable		= true
 ENT.AdminOnly = false
 ENT.DoNotDuplicate = true
-
+-- TODO!: DEPRECATE THIS TO SPAWN GRAV GUN WEAPON, AND MOVE DEGRADING TO IT
 if SERVER then
 
 AddCSLuaFile("shared.lua")
+
+local function Deprecate_SpawnWep(pos, ang)
+	local ent = ents.Create("weapon_superphyscannon")
+	
+	ent:SetPos(pos)
+	if ang then
+		ent:SetAngles(ang)
+	end
+	ent:Spawn()
+	ent:Activate()
+end
 
 function ENT:SpawnFunction(ply, tr)
 
@@ -17,13 +28,15 @@ function ENT:SpawnFunction(ply, tr)
 	
 	local SpawnPos = tr.HitPos + tr.HitNormal * 16
 	
-	local ent = ents.Create("MegaPhyscannon")
+	/*local ent = ents.Create("MegaPhyscannon")
 	
 	ent:SetPos(SpawnPos)
 	ent:Spawn()
 	ent:Activate()
 	--ent.ClawOpenState = false
-	ent.Planted = false
+	ent.Planted = false*/
+	
+	Deprecate_SpawnWep(SpawnPos)
 	
 	return ent
 end
@@ -33,7 +46,6 @@ end
    Name: Initialize
 ---------------------------------------------------------*/
 function ENT:Initialize()
-
 	--local model = ("models/weapons/errolliamp/w_superphyscannon.mdl")
 	local model = ("models/weapons/shadowysn/w_superphyscannon.mdl")
 	
@@ -71,7 +83,7 @@ end
 /*---------------------------------------------------------
    Name: PhysicsCollide
 ---------------------------------------------------------*/
-function ENT:PhysicsCollide(data, physobj)
+/*function ENT:PhysicsCollide(data, physobj)
 	
 	// Play sound on bounce
 	if ((data.Speed > 150 and data.Speed <= 180) and data.DeltaTime > 0.2) then
@@ -80,12 +92,12 @@ function ENT:PhysicsCollide(data, physobj)
 	if (data.Speed > 180 and data.DeltaTime > 0.2) then
 		self.Entity:EmitSound("weapon.ImpactHard")
 	end
-end
+end*/
 
 /*---------------------------------------------------------
    Name: Use
 ---------------------------------------------------------*/
-function ENT:Use(activator, caller)
+/*function ENT:Use(activator, caller)
 	if self.Entity.Fading then return end
 	
 	if (activator:IsPlayer()) and not self.Planted then
@@ -98,62 +110,66 @@ function ENT:Use(activator, caller)
 		end
 		self.Entity:Remove()
 	end
-end
+end*/
 
 /*---------------------------------------------------------
    Name: Think
 ---------------------------------------------------------*/
 function ENT:Think()
-			if self.ClawOpenState == true then
-			self:SetPoseParameter("super_active", 1)
-			--net.Start("SCGG_Entity_InvalidateBone")
-			--net.WriteEntity( self )
-			--net.Send( player.GetAll() )
-			elseif self.ClawOpenState != true then
-			self:SetPoseParameter("super_active", 0)
-			--net.Start("SCGG_Entity_InvalidateBone")
-			--net.WriteEntity( self )
-			--net.Send( player.GetAll() )
+	--[[if self.ClawOpenState == true then
+		self:SetPoseParameter("active", 1)
+		--net.Start("SCGG_Entity_InvalidateBone")
+		--net.WriteEntity( self )
+		--net.Send( player.GetAll() )
+	elseif self.ClawOpenState != true then
+		self:SetPoseParameter("active", 0)
+		--net.Start("SCGG_Entity_InvalidateBone")
+		--net.WriteEntity( self )
+		--net.Send( player.GetAll() )
+	end--]]
+	/*if game.GetGlobalState("super_phys_gun") == GLOBAL_OFF and GetConVar("scgg_enabled"):GetInt() <= 0 and self.Entity.Fading != true then
+		self.Entity.Fading = true
+		--self.Entity:SetNWBool("scgg_spawn_into_old", false)
+		
+		local coreattachmentID=self.Entity:LookupAttachment("core")
+		local coreattachment = self.Entity:GetAttachment(coreattachmentID)
+		local core = ents.Create("env_citadel_energy_core")
+		core:SetPos( coreattachment.Pos )
+		core:SetAngles( self.Entity:GetAngles() )
+		core:SetParent( self.Entity )
+		core:Spawn()
+		core:Fire( "SetParentAttachment", "core", 0 )
+		core:Fire( "AddOutput","scale 1.5",0 )
+		core:Fire( "StartCharge","0.1``",0.1 )
+		core:Fire( "Stop","",0.7 )
+		core:Fire( "Kill","",1.7 )
+		
+		self.Entity:EmitSound("Weapon_Physgun.Off", 75, 100, 1)
+		
+		timer.Simple( 0.70, function()
+			if IsValid(self.Entity) then
+				self.Entity:SetCollisionGroup(COLLISION_GROUP_WORLD)
+				local normalgrav = ents.Create("weapon_physcannon")
+				normalgrav:SetPos( self.Entity:GetPos() )
+				normalgrav:SetAngles( self.Entity:GetPhysicsObject():GetAngles() )
+				normalgrav:SetVelocity( self.Entity:GetPhysicsObject():GetVelocity() )
+				normalgrav:Fire("Addoutput","spawnflags 2",0)
+				normalgrav:Fire("Addoutput","spawnflags 0",1)
+				normalgrav:Spawn()
+				normalgrav:Activate()
+				core:SetParent( normalgrav )
+				
+				cleanup.ReplaceEntity( self.Entity, normalgrav )
+				undo.ReplaceEntity( self.Entity, normalgrav )
+				undo.Finish()
+				self.Entity:Fire("Kill","",0.02)
 			end
-		if game.GetGlobalState("super_phys_gun") == GLOBAL_OFF and GetConVar("scgg_enabled"):GetInt() <= 0 and self.Entity.Fading != true then
-			self.Entity.Fading = true
-			--self.Entity:SetNWBool("scgg_spawn_into_old", false)
-			
-			local coreattachmentID=self.Entity:LookupAttachment("core")
-			local coreattachment = self.Entity:GetAttachment(coreattachmentID)
-			local core = ents.Create("env_citadel_energy_core")
-			core:SetPos( coreattachment.Pos )
-			core:SetAngles( self.Entity:GetAngles() )
-			core:SetParent( self.Entity )
-			core:Spawn()
-			core:Fire( "SetParentAttachment", "core", 0 )
-			core:Fire( "AddOutput","scale 1.5",0 )
-			core:Fire( "StartCharge","0.1``",0.1 )
-			core:Fire( "Stop","",0.7 )
-			core:Fire( "Kill","",1.7 )
-			
-			self.Entity:EmitSound("Weapon_Physgun.Off", 75, 100, 1)
-			
-			timer.Simple( 0.70, function()
-				if IsValid(self.Entity) then
-					self.Entity:SetCollisionGroup(COLLISION_GROUP_WORLD)
-					local normalgrav = ents.Create("weapon_physcannon")
-					normalgrav:SetPos( self.Entity:GetPos() )
-					normalgrav:SetAngles( self.Entity:GetPhysicsObject():GetAngles() )
-					normalgrav:SetVelocity( self.Entity:GetPhysicsObject():GetVelocity() )
-					normalgrav:Fire("Addoutput","spawnflags 2",0)
-					normalgrav:Fire("Addoutput","spawnflags 0",1)
-					normalgrav:Spawn()
-					normalgrav:Activate()
-					core:SetParent( normalgrav )
-					
-					cleanup.ReplaceEntity( self.Entity, normalgrav )
-					undo.ReplaceEntity( self.Entity, normalgrav )
-					undo.Finish()
-					self.Entity:Fire("Kill","",0.02)
-				end
-			end )
-		end
+		end )
+	end*/
+	
+	Deprecate_SpawnWep(self:GetPos(), self:GetAngles())
+	self:Remove()
+	
 	self.Entity:NextThink( 0.5 )
 end
 
@@ -170,7 +186,7 @@ end
 /*---------------------------------------------------------
    Name: DrawPre
 ---------------------------------------------------------*/
-function ENT:Draw()
+/*function ENT:Draw()
 	--[[local function CheckDrawSprite(position, width, height, color)
 		if position != nil and width != nil and height != nil and color != nil then
 		render.DrawSprite(position, width, height, color)
@@ -254,6 +270,6 @@ function ENT:Draw()
 	render.DrawSprite( StartPosOH, scale3, scale3, Color(255,255,255,80))
 	render.DrawSprite( StartPosLH, scale3, scale3, Color(255,255,255,80))
 	render.DrawSprite( StartPosRH, scale3, scale3, Color(255,255,255,80))
-end
+end*/
 
 end

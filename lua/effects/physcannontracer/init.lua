@@ -1,13 +1,14 @@
 
 
 EFFECT.Mat = Material( "sprites/physcannon_bluelight1b" )
-EFFECT.Mat:SetInt("$spriterendermode",9)
 
 /*---------------------------------------------------------
    Init( data table )
 ---------------------------------------------------------*/
 function EFFECT:Init( data )
-
+	
+	self.Mat:SetInt("$spriterendermode",9)
+	
 	self.Position = data:GetStart()
 	self.WeaponEnt = data:GetEntity()
 	self.Attachment = data:GetAttachment()

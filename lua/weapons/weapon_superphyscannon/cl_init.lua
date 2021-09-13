@@ -1,13 +1,15 @@
+if SERVER then return end
+
 include ("shared.lua")
 
 SWEP.Category			= "Half-Life 2"
 
-	SWEP.PrintName			= "SUPER GRAVITY GUN"
-	SWEP.Author			= "ErrolLiamP, Î¤yler Blu, QuentinDylanP, pillow, Shadowysn"
-	SWEP.Slot			= 1
-	SWEP.SlotPos			= 0
-	SWEP.IconLetter			= "k"
-	SWEP.ViewModelFOV =		GetConVar("viewmodel_fov"):GetFloat()
+SWEP.PrintName			= "SUPER GRAVITY GUN"
+SWEP.Author			= "ErrolLiamP, Î¤yler Blu, QuentinDylanP, pillow, Shadowysn"
+SWEP.Slot			= 1
+SWEP.SlotPos			= 0
+SWEP.IconLetter			= "k"
+SWEP.ViewModelFOV =		GetConVar("viewmodel_fov"):GetFloat()
 
 SWEP.Slot				= 0
 SWEP.SlotPos 			= 0
@@ -20,33 +22,73 @@ SWEP.Instructions		= ""
 SWEP.BounceWeaponIcon	= false
 SWEP.DrawWeaponInfoBox	= false
 
-SWEP.WepSelectIcon = surface.GetTextureID("weapons/Megaphyscannon")
+--SWEP.WepSelectIcon = surface.GetTextureID("weapons/Megaphyscannon")
 
-if SERVER then return end
+--[[surface.CreateFont("SCGG_Wep_Font", {
+	font = "HalfLife2",
+	size = ScreenScaleH(64),
+	weight = 0,
+	blursize = 0,
+	scanlines = 0,
+	antialias = true,
+	additive = true,
+})
 
-local GetRag = {}
+surface.CreateFont("SCGG_Wep_Font_Glow", {
+	font = "HalfLife2",
+	size = ScreenScaleH(64),
+	weight = 0,
+	blursize = ScreenScaleH(4),
+	scanlines = 2,
+	antialias = true,
+	additive = true,
+})--]]
 
-net.Receive( "SCGG_Ragdoll_GetPlayerColor", function() 
+function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
+	surface.SetTextColor(255, 235, 0, alpha)
+	
+	surface.SetFont("SCGG_Wep_Font")
+	local w, h = surface.GetTextSize("m")
+	
+	surface.SetTextPos(x + (wide / 2) - (w / 2), y + (tall / 2) - (h / 2))
+	surface.DrawText("m")
+	
+	surface.SetTextPos(x + (wide / 2) - (w / 2), y + (tall / 2) - (h / 2))
+	surface.SetFont("SCGG_Wep_Font_Glow")
+	surface.DrawText("m")
+end
+
+local GetRag = {} -- For some infathomable reason, putting this in cl_scgg_autorun doesn't work.
+
+net.Receive("SCGG_Ragdoll_GetPlayerColor", function() 
 	local rag = net.ReadInt(32)
 	local ply = net.ReadInt(32)
 	local col = net.ReadVector()
-	if !ply or ply == nil then return end
 	if !col or col == nil then return end
-	GetRag = {rag=rag,ply=ply,col=col}
-end )
+	GetRag = {rag = rag, ply = ply, col = col}
+end)
 
 hook.Add("NetworkEntityCreated","SCGG_Ragdoll_SetPlayerColor",function(ent)
 	if not GetRag.rag then return end
-	if GetRag.rag==ent:EntIndex() then
+	if GetRag.rag == ent:EntIndex() then
 		local getcol = GetRag.col
-		Entity(GetRag.rag).GetPlayerColor = function(self) return getcol end
+		local getrag_ply = Entity(GetRag.ply)
+		local getrag_rag = Entity(GetRag.rag)
+		getrag_rag.GetPlayerColor = function(self) return getcol end
+		
+		if IsValid(getrag_ply) and getrag_ply:GetModel() == getrag_rag:GetModel() then
+			getrag_rag:SnatchModelInstance(getrag_ply)
+		end
+		
 		GetRag = {}
 	end
 end)
 
-function SWEP:DrawWorldModel()
-	self.SCGG_IsWorldModelDrawn = true
-	self:DrawModel()
+include("cl_glow_spr.lua")
+
+function SWEP:Initialize() -- Initialization stuff.
+	self:SetWeaponHoldType( self.HoldType )
+	self:SetSkin(1)
 end
 
 local function PoseArithmetic(ent, pose_str, number)
@@ -80,20 +122,33 @@ local function GetVMPoses(wep)
 end
 
 function SWEP:AdjustClaws()
-	--[[local active_string = "active"
-	local ViewModel = self.Owner:GetViewModel()
-	local WorldModel = self
-	
-	local vm_active_pose = 0
-	local wm_active_pose = 0
-	if IsValid(ViewModel) then
-		local vm_active_pose = ViewModel:GetPoseParameter(active_string)
-		vm_active_pose = PoseArithmetic(ViewModel, active_string, vm_active_pose)
+	local function CalculateFrameAffectedNum(in_num)
+		local frametime = FrameTime()
+		
+		local result = in_num + frametime
+		
+		return result
 	end
-	if IsValid(WorldModel) then
-		local wm_active_pose = WorldModel:GetPoseParameter(active_string)
-		wm_active_pose = PoseArithmetic(WorldModel, active_string, wm_active_pose)
-	end--]]
+	
+	if self.PoseParam < 0 then
+		self.PoseParam = 0
+	elseif self.PoseParam > 1 then
+		self.PoseParam = 1
+	end
+	if self.PoseParamDesired < self.PoseParam then -- For some reason, claw sounds from PlayClawSound are reversed here
+		if self.PoseParam >= 1 then
+			self:PlayClawSound(true) -- Should play open sound
+		end
+		local result = CalculateFrameAffectedNum(0.0025)
+		self.PoseParam = self.PoseParam-result
+	elseif self.PoseParamDesired > self.PoseParam then
+		if self.PoseParam <= 0 then
+			self:PlayClawSound(false) -- Should play close sound
+		end
+		local result = CalculateFrameAffectedNum(0.05)
+		self.PoseParam = self.PoseParam+result
+	end
+	
 	local ViewModel, WorldModel, --[[vm_active_pose, wm_active_pose,--]] active_string = GetVMPoses(self)
 	
 	if (ViewModel and IsValid(ViewModel)) or (WorldModel and IsValid(WorldModel)) then 
@@ -108,215 +163,62 @@ function SWEP:AdjustClaws()
 		end
 	end
 end
+
 function SWEP:OpenClaws( boolean ) -- Open claws function.
-	--print(self:GetHP())
-	--print("Open Claws!")
 	if !IsValid(self.Owner) or !self.Owner:Alive() then return end
-	
-	--[[local active_string = "active"
-	local ViewModel = self.Owner:GetViewModel()
-	local WorldModel = self
 	
 	timer.Remove("scgg_claw_close_delay"..self:EntIndex()) -- Remove the delayed claw close timer often created by 'scgg_claw_mode 2'.
 	
-	local vm_active_pose = 0
-	local wm_active_pose = 0
-	--local vm_min, vm_max = 0
-	--local wm_min, wm_max = 0
-	if IsValid(ViewModel) then
-		local vm_active_pose = ViewModel:GetPoseParameter(active_string)
-		--vm_min, vm_max = ViewModel:GetPoseParameterRange(vm_active_pose)
-		vm_active_pose = PoseArithmetic(ViewModel, active_string, vm_active_pose)
-	end
-	if IsValid(WorldModel) then
-		local wm_active_pose = WorldModel:GetPoseParameter(active_string)
-		--wm_min, wm_max = ViewModel:GetPoseParameterRange(vm_active_pose)
-		wm_active_pose = PoseArithmetic(WorldModel, active_string, wm_active_pose)
+	if self.PoseParamDesired >= 1 then return end
+	
+	--[[if (self.PoseParam <= 0 and self.PoseParamDesired <= 0) and !IsValid(self:GetTP()) and boolean then -- Sound emitting!
+		self:PlayClawSound(false) -- Should play open sound
 	end--]]
-	local ViewModel, WorldModel, active_string = GetVMPoses(self)
-	timer.Remove("scgg_claw_close_delay"..self:EntIndex()) -- Remove the delayed claw close timer often created by 'scgg_claw_mode 2'.
 	
-	if !timer.Exists("scgg_move_claws_open"..self:EntIndex()) then
-		-- ^ Does not run the rest of the code if a timer to open the claws exists.
-		timer.Remove("scgg_move_claws_close"..self:EntIndex())
-		
-		timer.Create( "scgg_move_claws_open"..self:EntIndex(), 0, 60, function() -- The timer for claw opening is created.
-			if !IsValid(self) or !IsValid(self.Owner) or !self.Owner:Alive() or self.PoseParam >= 1 then timer.Remove("scgg_move_claws_open"..self:EntIndex()) return end
-			--if wm_active_pose > 1 or vm_active_pose > 1 then self.PoseParam = 1 return end
-			self.PoseParam = self.PoseParam+0.1
-		end)
-		
-		if (self.PoseParam <= 0) and boolean then -- Sound emitting!
-			self.Weapon:StopSound("Weapon_PhysCannon.CloseClaws")
-			self.Weapon:EmitSound("Weapon_PhysCannon.OpenClaws")
-		end
-	end
-	--[[if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel)) then 
-		-- ^ Remove the timer if the owner is invalid/dead or the viewmodel and worldmodel don't exist.
-		timer.Remove("scgg_move_claws_open"..self:EntIndex()) return 
-	end--]]
+	self.PoseParamDesired = 1
 end
-function SWEP:CloseClaws( boolean ) -- Open claws function.
-	--print(self:GetHP())
-	--print("Open Claws!")
-	if !IsValid(self.Owner) or !self.Owner:Alive() then return end
-	
-	local ViewModel, WorldModel, active_string = GetVMPoses(self)
-	
-	if !timer.Exists("scgg_move_claws_close"..self:EntIndex()) then
-		-- ^ Does not run the rest of the code if a timer to open the claws exists.
-		timer.Remove("scgg_move_claws_open"..self:EntIndex())
-		
-		timer.Create( "scgg_move_claws_close"..self:EntIndex(), 0, 60, function() -- The timer for claw opening is created.
-			if !IsValid(self) or !IsValid(self.Owner) or !self.Owner:Alive() or self.PoseParam <= 0 then timer.Remove("scgg_move_claws_close"..self:EntIndex()) return end
-			--if wm_active_pose > 1 or vm_active_pose > 1 then self.PoseParam = 1 return end
-			self.PoseParam = self.PoseParam-0.05
-		end)
-		
-		if (self.PoseParam >= 1) and boolean then -- Sound emitting!
-			self.Weapon:StopSound("Weapon_PhysCannon.OpenClaws")
-			self.Weapon:EmitSound("Weapon_PhysCannon.CloseClaws")
-		end
-	end
-	--[[if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel)) then 
-		-- ^ Remove the timer if the owner is invalid/dead or the viewmodel and worldmodel don't exist.
-		timer.Remove("scgg_move_claws_close"..self:EntIndex()) return 
-	end--]]
-end
-
---[[function SWEP:OpenClaws( boolean ) -- Open claws function.
-	--print(self:GetHP())
-	--print("Open Claws!")
-	if !IsValid(self.Owner) or !self.Owner:Alive() then return end
-	
-	local active_string = "active"
-	local ViewModel = self.Owner:GetViewModel()
-	local WorldModel = self
-	
-	timer.Remove("scgg_claw_close_delay"..self:EntIndex()) -- Remove the delayed claw close timer often created by 'scgg_claw_mode 2'.
-	
-	local vm_active_pose = 0
-	local wm_active_pose = 0
-	--local vm_min, vm_max = 0
-	--local wm_min, wm_max = 0
-	if IsValid(ViewModel) then
-		local vm_active_pose = ViewModel:GetPoseParameter(active_string)
-		--vm_min, vm_max = ViewModel:GetPoseParameterRange(vm_active_pose)
-		vm_active_pose = PoseArithmetic(ViewModel, active_string, vm_active_pose)
-	end
-	if IsValid(WorldModel) then
-		local wm_active_pose = WorldModel:GetPoseParameter(active_string)
-		--wm_min, wm_max = ViewModel:GetPoseParameterRange(vm_active_pose)
-		wm_active_pose = PoseArithmetic(WorldModel, active_string, wm_active_pose)
-	end
-	
-	if (ViewModel and vm_active_pose < 1) or (WorldModel and wm_active_pose < 1) then 
-		local frame = ViewModel:GetPoseParameter(active_string)
-		local worldframe = WorldModel:GetPoseParameter(active_string)
-		if !timer.Exists("scgg_move_claws_open"..self:EntIndex()) then
-			-- ^ Does not run the rest of the code if a timer to open the claws exists.
-			timer.Remove("scgg_move_claws_close"..self:EntIndex())
-			
-			timer.Create( "scgg_move_claws_open"..self:EntIndex(), 0, 20, function() -- The timer for claw opening is created.
-				if !IsValid(self) or !IsValid(self.Owner) or !self.Owner:Alive() then timer.Remove("scgg_move_claws_open"..self:EntIndex()) return end
-				if IsValid(ViewModel) then -- Viewmodel claws are moved here.
-					if frame > 1 then ViewModel:SetPoseParameter(active_string, 1) end
-					--if frame >= 1 then timer.Remove("scgg_move_claws_open"..self:EntIndex()) return end
-					frame = frame+0.1
-					ViewModel:SetPoseParameter(active_string, frame)
-					ViewModel:InvalidateBoneCache()
-				end
-				if IsValid(WorldModel) then -- Worldmodel claws are moved here.
-					if worldframe > 1 then WorldModel:SetPoseParameter(active_string, 1) end
-					--if worldframe >= 1 then timer.Remove("scgg_move_claws_open"..self:EntIndex()) return end
-					worldframe = worldframe+0.1
-					WorldModel:SetPoseParameter(active_string, worldframe)
-					WorldModel:InvalidateBoneCache()
-					if wm_active_pose >= 0.5 then
-						self.ClawOpenState = true
-					end
-				end
-			end)
-			if (frame <= 0 or worldframe <= 0) and !IsValid(self:GetHP()) and boolean then -- Sound emitting!
-				self.Weapon:StopSound("Weapon_PhysCannon.CloseClaws")
-				self.Weapon:EmitSound("Weapon_PhysCannon.OpenClaws")
-			end
-		end
-		if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel))
-		or (vm_active_pose >= 1 and wm_active_pose >= 1) then 
-			-- ^ Remove the timer if the owner is invalid/dead or the viewmodel and worldmodel don't exist.
-			timer.Remove("scgg_move_claws_open"..self:EntIndex()) return 
-		end
-	end
-
-end
-
 function SWEP:CloseClaws( boolean ) -- Close claws function.
-	--print("Close Claws!")
-	if !IsValid(self.Owner) or !self.Owner:Alive() then return end
+	if !IsValid(self.Owner) or !self.Owner:Alive() or self.PoseParamDesired <= 0 then return end
 	
-	local active_string = "active"
-	local ViewModel = self.Owner:GetViewModel()
-	local WorldModel = self
+	--[[if (self.PoseParam >= 1 and self.PoseParamDesired >= 1) and !IsValid(self:GetTP()) and boolean then -- Sound emitting!
+		self:PlayClawSound(true) -- Should play close sound
+	end--]]
 	
-	timer.Remove("scgg_claw_close_delay"..self:EntIndex()) -- Remove the delayed claw close timer often created by 'scgg_claw_mode 2'.
-	
-	local vm_active_pose = 0
-	local wm_active_pose = 0
-	if IsValid(ViewModel) then
-		local vm_active_pose = ViewModel:GetPoseParameter(active_string)
+	self.PoseParamDesired = 0
+end
+
+function SWEP:PlayClawSound(isClose)
+	local snd_str = "Weapon_PhysCannon.OpenClaws"
+	if isClose == true then
+		snd_str = "Weapon_PhysCannon.CloseClaws"
 	end
-	if IsValid(WorldModel) then
-		local wm_active_pose = WorldModel:GetPoseParameter(active_string)
-	end
+	--print(self.ActiveSnd)
 	
-	--if ViewModel and self.ClawOpenState == true then
-	if (ViewModel and vm_active_pose > 0) or (WorldModel and wm_active_pose > 0) then
-		local frame = vm_active_pose
-		local worldframe = wm_active_pose
-		if !timer.Exists("scgg_move_claws_close"..self:EntIndex()) then
-			-- ^ Does not run the rest of the code if a timer to close the claws exists.
-			timer.Remove("scgg_move_claws_open"..self:EntIndex())
-			
-			timer.Create( "scgg_move_claws_close"..self:EntIndex(), 0, 20, function() -- The timer for claw closing is created.
-				if !IsValid(self) or !IsValid(self.Owner) or !self.Owner:Alive() then timer.Remove("scgg_move_claws_close"..self:EntIndex()) return end
-				if IsValid(ViewModel) then
-					if frame < 0 then ViewModel:SetPoseParameter(active_string, 0) end
-					--if frame <= 0 then print("doh2") timer.Remove("scgg_move_claws_close"..self:EntIndex()) return end
-					frame = frame-0.05
-					ViewModel:SetPoseParameter(active_string, frame)
-					ViewModel:InvalidateBoneCache()
-				end
-				if IsValid(WorldModel) then
-					if worldframe < 0 then WorldModel:SetPoseParameter(active_string, 0) end
-					--if worldframe <= 0 then print("doh3") timer.Remove("scgg_move_claws_close"..self:EntIndex()) return end
-					worldframe = worldframe-0.05
-					WorldModel:SetPoseParameter(active_string, worldframe)
-					WorldModel:InvalidateBoneCache()
-				end
-				if wm_active_pose < 0.5 then
-					self.ClawOpenState = false
-				end
-			end)
-			if (frame >= 1 or worldframe >= 1) and !IsValid(self:GetHP()) and boolean then
-				self.Weapon:StopSound("Weapon_PhysCannon.OpenClaws")
-				self.Weapon:EmitSound("Weapon_PhysCannon.CloseClaws")
-			end
-		end
-		if (!IsValid(self.Owner) or !self.Owner:Alive()) or (!IsValid(ViewModel) and !IsValid(WorldModel))
-		or (vm_active_pose <= 0 and wm_active_pose <= 0) then
-			-- ^ Remove the timer if the owner is invalid/dead or the viewmodel and worldmodel don't exist.
-			timer.Remove("scgg_move_claws_close"..self:EntIndex()) return
-		end
+	self:StopClawSound()
+	
+	local temp_snd = CreateSound( self, snd_str )
+	self.ActiveSnd = temp_snd
+	temp_snd:Play()
+end
+function SWEP:StopClawSound()
+	if self.ActiveSnd != nil and self.ActiveSnd:IsPlaying() then
+		self.ActiveSnd:Stop()
 	end
-end--]]
+end
 
 function SWEP:Think()
 	local newview_info = GetConVar("cl_scgg_viewmodel"):GetString()
-	if self.ViewModel != newview_info then -- Attempt to set the chosen cl_scgg_viewmodel model.
+	if self.ViewModel != self.WorldModel and util.IsValidModel(newview_info) and self.ViewModel != newview_info then
+		-- Attempt to set the chosen cl_scgg_viewmodel model.
 		self.ViewModel = newview_info
-		self.Owner:GetViewModel():SetWeaponModel(newview_info, self)
+		local vm = self.Owner:GetViewModel()
+		vm:SetWeaponModel(newview_info, self)
+		vm:InvalidateBoneCache()
 	end
+	
+	--local vimodel = self.Owner:GetViewModel()
+	--print(vimodel:IsSequenceFinished())
+	--print(vimodel:GetSequenceActivityName(vimodel:GetSequence()))
 	
 	if GetConVar("scgg_light"):GetBool() then
 		if !self.Weapon:GetNWBool("Glow") then
@@ -351,6 +253,9 @@ function SWEP:Think()
 	if self.PoseParam == nil then
 		self.PoseParam = 0
 	end
+	if self.PoseParamDesired == nil then
+		self.PoseParamDesired = 0
+	end
 	self:AdjustClaws()
 	
 	local clawcvar = GetConVar("scgg_claw_mode"):GetInt()
@@ -359,6 +264,11 @@ function SWEP:Think()
 	elseif (clawcvar > 0 and clawcvar < 2) then
 		self:OpenClaws( false )
 	elseif clawcvar >= 2 then
+		local glow_bool = self:GetNWBool("SCGG_Glow", false)
+		if glow_bool then
+			self:StopClawSound()
+		end
+		
 		local trace = self.Owner:GetEyeTrace()
 		local tracetgt = trace.Entity
 		local tgt = nil
@@ -369,11 +279,11 @@ function SWEP:Think()
 			tgt = tracetgt
 		end
 		--print(tgt)
-		if self:PickupCheck(tgt) then
-			self:OpenClaws( true )
-		--[[elseif IsValid(self:GetHP()) and self.Fading != true then
+		if IsValid(self:GetTP()) then
 			timer.Remove("scgg_claw_close_delay"..self:EntIndex())
-			self:OpenClaws( false )--]]
+			self:OpenClaws( false )
+		elseif self:PickupCheck(tgt) then
+			self:OpenClaws( true )
 		else
 			if !timer.Exists("scgg_claw_close_delay"..self:EntIndex()) and IsValid(self) then
 				timer.Create( "scgg_claw_close_delay"..self:EntIndex(), 0.6, 1, function()
@@ -384,6 +294,7 @@ function SWEP:Think()
 			end
 		end
 	end
+	
 	self:SetNextClientThink(CurTime()+0.5)
 end
 
@@ -397,89 +308,9 @@ end
 	end
 end--]]
 
-function SWEP:Holster()
+--[[function SWEP:Holster()
 	self:SetHP(nil)
 	return true
-end
-
-local Mat = Material( "sprites/blueflare1_noz" )
-Mat:SetInt("$spriterendermode",5)
-local MatWorld = Material( "sprites/blueflare1" )
-MatWorld:SetInt("$spriterendermode",5)
-local Main = Material( "effects/fluttercore" )
-Main:SetInt("$spriterendermode",9)
-
---[[function SWEP:PreDrawViewModel(vm)
-	--Mat:SetInt("$spriterendermode",5)
-	--Main:SetInt("$spriterendermode",9)
-	--MatWorld:SetInt("$spriterendermode",5)
-	local function CheckDrawSprite(position, width, height, color)
-		if position != nil and width != nil and height != nil and color != nil then
-			render.DrawSprite( position, width, height, color)
-		end
-	end
-	local function ColorSet(alpha)
-		if GetConVar("cl_scgg_physgun_color"):GetInt() > 0 then
-			local getcol = LocalPlayer():GetPlayerColor():ToColor()
-			return Color(getcol.r,getcol.g,getcol.b,alpha)
-		end
-	return nil
-	end
-	
-	local StartPos = nil
-	local StartPosO = nil
-	local StartPosL = nil
-	local StartPosOH = nil
-	local StartPosLH = nil
-	local function DoCoreEffect(active)
-		local scale = math.Rand( 8, 10 )
-		--local scale2 = math.Rand( 25, 27 )
-		local scale2 = math.Rand( 20, 24 )
-		local scale3 = math.Rand( 3, 4 )
-		local scale7 = math.Rand( 12, 14 )
-		if IsValid(vm) then
-			local attachmentID=vm:LookupAttachment("muzzle")
-			if attachmentID > 0 then
-			local attachment = vm:GetAttachment(attachmentID)
-			StartPos = LocalToWorld( Vector(0, 0, 0), Angle(), attachment.Pos, attachment.Ang )
-			StartPos = attachment.Pos
-			end
-			
-			local attachmentID2=vm:LookupAttachment("fork1t")
-			if attachmentID2 > 0 then
-			local attachment_O = vm:GetAttachment( attachmentID2 )
-			StartPosO = attachment_O.Pos
-			end
-			
-			local attachmentID3=vm:LookupAttachment("fork2t")
-			if attachmentID3 > 0 then
-			local attachment_L = vm:GetAttachment( attachmentID3 )
-			StartPosL = attachment_L.Pos
-			end
-			
-			local attachmentID4=vm:LookupAttachment("fork1b")
-			if attachmentID4 > 0 then
-			local attachment_OH = vm:GetAttachment( attachmentID4)
-			StartPosOH = attachment_OH.Pos
-			end
-			
-			local attachmentID5=vm:LookupAttachment("fork2b")
-			if attachmentID5 > 0 then
-			local attachment_LH = vm:GetAttachment( attachmentID5 )
-			StartPosLH = attachment_LH.Pos
-			end
-			render.SetMaterial( Main )
-			--CheckDrawSprite( StartPos, scale2, scale2, Color(255,255,255,240))
-			CheckDrawSprite( StartPos, scale2, scale2, ColorSet(90) or Color(255,255,255,90))
-			render.SetMaterial( Mat )
-			CheckDrawSprite( StartPosO, scale, scale, ColorSet(80) or Color(255,255,255,80))
-			CheckDrawSprite( StartPosL, scale, scale, ColorSet(80) or Color(255,255,255,80))
-			CheckDrawSprite( StartPosOH, scale, scale, ColorSet(80) or Color(255,255,255,80))
-			CheckDrawSprite( StartPosLH, scale, scale, ColorSet(80) or Color(255,255,255,80))
-		end
-	end
-	
-	DoCoreEffect(false)
 end--]]
 
 -- Easier to not use this, as if you holster your weapon as it got it's viewmodel set, when you deploy it it'll glitch back to the old model
