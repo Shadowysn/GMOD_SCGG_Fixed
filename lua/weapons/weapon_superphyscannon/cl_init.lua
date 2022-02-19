@@ -5,7 +5,6 @@ include ("shared.lua")
 SWEP.Category			= "Half-Life 2"
 
 SWEP.PrintName			= "SUPER GRAVITY GUN"
-SWEP.Author			= "ErrolLiamP, Î¤yler Blu, QuentinDylanP, pillow, Shadowysn"
 SWEP.Slot			= 1
 SWEP.SlotPos			= 0
 SWEP.IconLetter			= "k"
@@ -16,7 +15,7 @@ SWEP.SlotPos 			= 0
 SWEP.DrawAmmo			= false
 SWEP.DrawCrosshair 		= true
 
-SWEP.Author			= "ErrolLiamP, Î¤yler Blu, pillow, Shadowysn"
+SWEP.Author			= "ErrolLiamP, Î¤yler Blu, QuentinDylanP, pillow, Shadowysn"
 SWEP.Purpose			= ""
 SWEP.Instructions		= ""
 SWEP.BounceWeaponIcon	= false
@@ -207,20 +206,22 @@ function SWEP:StopClawSound()
 end
 
 function SWEP:Think()
-	local newview_info = GetConVar("cl_scgg_viewmodel"):GetString()
-	if self.ViewModel != self.WorldModel and util.IsValidModel(newview_info) and self.ViewModel != newview_info then
-		-- Attempt to set the chosen cl_scgg_viewmodel model.
-		self.ViewModel = newview_info
-		local vm = self.Owner:GetViewModel()
-		vm:SetWeaponModel(newview_info, self)
-		vm:InvalidateBoneCache()
+	if ConVarExists("cl_scgg_viewmodel") then
+		local newview_info = GetConVar("cl_scgg_viewmodel"):GetString()
+		if util.IsValidModel(newview_info) and self.ViewModel != newview_info then
+			-- Attempt to set the chosen cl_scgg_viewmodel model.
+			self.ViewModel = newview_info
+			local vm = self.Owner:GetViewModel()
+			vm:SetWeaponModel(newview_info, self)
+			vm:InvalidateBoneCache()
+		end
 	end
 	
 	--local vimodel = self.Owner:GetViewModel()
 	--print(vimodel:IsSequenceFinished())
 	--print(vimodel:GetSequenceActivityName(vimodel:GetSequence()))
 	
-	if GetConVar("scgg_light"):GetBool() then
+	if ConVarExists("scgg_light") and GetConVar("scgg_light"):GetBool() then
 		if !self.Weapon:GetNWBool("Glow") then
 			if !self.Owner:LookupBone("ValveBiped.Bip01_R_Hand") then return end
 			local dlight = DynamicLight("lantern_"..self:EntIndex()) -- Create the light.
@@ -258,12 +259,15 @@ function SWEP:Think()
 	end
 	self:AdjustClaws()
 	
-	local clawcvar = GetConVar("scgg_claw_mode"):GetInt()
-	if clawcvar <= 0 then
+	local clawCvar = 1
+	if ConVarExists("scgg_claw_mode") then
+		clawCvar = GetConVar("scgg_claw_mode"):GetInt()
+	end
+	if clawCvar <= 0 then
 		self:CloseClaws( false )
-	elseif (clawcvar > 0 and clawcvar < 2) then
+	elseif (clawCvar > 0 and clawCvar < 2) then
 		self:OpenClaws( false )
-	elseif clawcvar >= 2 then
+	elseif clawCvar >= 2 then
 		local glow_bool = self:GetNWBool("SCGG_Glow", false)
 		if glow_bool then
 			self:StopClawSound()
@@ -273,7 +277,7 @@ function SWEP:Think()
 		local tracetgt = trace.Entity
 		local tgt = nil
 		
-		if GetConVar("scgg_cone"):GetBool() and !self:PickupCheck(tracetgt) then--and (!IsValid(self:GetHP())) then
+		if (!ConVarExists("scgg_cone") or GetConVar("scgg_cone"):GetBool()) and !self:PickupCheck(tracetgt) then--and (!IsValid(self:GetHP())) then
 			tgt = self:GetConeEnt(trace)
 		else
 			tgt = tracetgt

@@ -7,7 +7,7 @@ EFFECT.Mat = Material( "sprites/physcannon_bluelight1b" )
 ---------------------------------------------------------*/
 function EFFECT:Init( data )
 	
-	self.Mat:SetInt("$spriterendermode",9)
+	self.Mat:SetInt("$spriterendermode", 5)
 	
 	self.Position = data:GetStart()
 	self.WeaponEnt = data:GetEntity()

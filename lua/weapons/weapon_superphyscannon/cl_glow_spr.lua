@@ -77,15 +77,31 @@ local function CheckDrawBeam(startPos, endPos, width, textureStart, textureEnd, 
 	end
 end
 local function ColorSet(wep_ent, alpha)
-	local cvar_num = GetConVar("cl_scgg_physgun_color"):GetInt()
-	if IsValid(wep_ent) and IsValid(wep_ent:GetOwner()) and cvar_num > 0 then
-		local getcol = wep_ent:GetOwner():GetWeaponColor():ToColor()
-		if cvar_num > 1 then
-			getcol = wep_ent:GetOwner():GetPlayerColor():ToColor()
-		end
-		return Color(getcol.r,getcol.g,getcol.b,alpha)
+	local cvar_num = 0
+	if ConVarExists("cl_scgg_physgun_color") then
+		cvar_num = GetConVar("cl_scgg_physgun_color"):GetInt()
 	end
-	return nil
+	local owner = wep_ent:GetOwner()
+	if IsValid(wep_ent) and IsValid(owner) and cvar_num > 0 then
+		if owner:IsPlayer() then
+			local getcol = owner:GetWeaponColor():ToColor()
+			if cvar_num > 1 then
+				getcol = owner:GetPlayerColor():ToColor()
+			end
+			getcol = Color(getcol.r,getcol.g,getcol.b,alpha)
+			
+			return getcol
+		else
+			if wep_ent.SCGG_Color == nil then
+				wep_ent.SCGG_Color = Color(math.random(0, 255), math.random(0, 255), math.random(0, 255))
+			end
+		end
+	end
+	if cvar_num > 0 and wep_ent.SCGG_Color != nil then
+		return wep_ent.SCGG_Color
+	else
+		return nil
+	end
 end
 local function GetAttachment(attach, mdl, nFOV, isView)
 	if isView == nil then
@@ -192,16 +208,21 @@ local function DoEffect(wep_ent, nFOV, viewM)
 	if !IsValid(mdl) then return end
 	if !IsValid(wep_ent) then return end
 	
+	local effectsCvar = 0
+	if ConVarExists("cl_scgg_effects_mode") then
+		effectsCvar = GetConVar("cl_scgg_effects_mode"):GetInt()
+	end
+	
 	--print(string.format("isView: %s", tostring(isView)))
 	local scale_prong_view = math.Rand( 4, 6 ) -- Originally 8, 10
 	local scale_muzzle_view = math.Rand( 39, 41 ) -- Originally 45, 47
 	
 	local scale_core_view = math.Rand( 12, 16 ) -- Normal  -- Originally 20, 24
-	if GetConVar("cl_scgg_effects_mode"):GetInt() >= 1 then
+	if effectsCvar >= 1 then
 		scale_core_view = math.Rand( 13, 18 ) -- A bit bigger  -- Originally 21, 26
 	end
 	local scale_glow_view = math.Rand( 21, 28 ) -- Half-Life 2  -- Originally 31, 39
-	if GetConVar("cl_scgg_effects_mode"):GetInt() >= 1 then
+	if effectsCvar >= 1 then
 		scale_glow_view = math.Rand( 24, 34 ) -- Half-Life 2 Survivor  -- Originally 34, 45
 	end
 	
@@ -211,7 +232,7 @@ local function DoEffect(wep_ent, nFOV, viewM)
 	local scale_glow_world = math.Rand( 12, 14 )
 	
 	if wep_ent.Muzzle then
-		if isView and GetConVar("cl_scgg_effects_mode"):GetInt() < 1 then
+		if isView and effectsCvar < 1 then
 			StartPos = GetAttachment("muzzle", mdl, nFOV)
 			
 			render.SetMaterial( Mat )
@@ -238,7 +259,7 @@ local function DoEffect(wep_ent, nFOV, viewM)
 			
 			render.SetMaterial( Main )
 			--CheckDrawSprite( StartPos, scale_glow_view, scale_glow_view, ColorSet(wep_ent, 240) or Color(255,255,255,240))
-			if GetConVar("cl_scgg_effects_mode"):GetInt() >= 1 then
+			if effectsCvar >= 1 then
 				CheckDrawSprite( StartPos, scale_glow_view, scale_glow_view, ColorSet(wep_ent, 50, true) or Color(255,255,255,35)) -- Half-Life 2 Survivor
 				CheckDrawSprite( StartPos, scale_core_view, scale_core_view, ColorSet(wep_ent, 90) or Color(255,255,255,90)) -- Half-Life 2 Survivor
 			else
@@ -399,7 +420,7 @@ function SWEP:PreDrawViewModel(vm)
 	--Main:SetInt("$spriterendermode",9)
 	--MatWorld:SetInt("$spriterendermode",5)
 	
-	if !GetConVar("scgg_no_effects"):GetBool() then
+	if !ConVarExists("scgg_no_effects") or !GetConVar("scgg_no_effects"):GetBool() then
 		DoEffect(self, GetFOV(self), vm)
 		--DoEffect(vm, GetFOV(self), 1, false)
 	end
@@ -408,7 +429,7 @@ end
 function SWEP:DrawWorldModel()
 	self:DrawModel()
 	
-	if !GetConVar("scgg_no_effects"):GetBool() then
+	if !ConVarExists("scgg_no_effects") or !GetConVar("scgg_no_effects"):GetBool() then
 		DoEffect(self, GetFOV(self))
 	end
 end

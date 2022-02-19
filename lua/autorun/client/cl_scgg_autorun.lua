@@ -258,6 +258,7 @@ local function HL2Options(panel) -- HL2 Options for the menu.
 		scgg_friendly_fire="1", 
 		scgg_affect_players="1", 
 		scgg_weapon_vaporize="0", 
+		scgg_primary_extra="0",
 		scgg_allow_others="0", 
 		scgg_keep_armor="0", 
 		scgg_claw_mode="1", 
@@ -268,7 +269,32 @@ local function HL2Options(panel) -- HL2 Options for the menu.
 		scgg_deploy_style="1", 
 		scgg_no_effects="0", 
 		scgg_equip_sound="0",
-		scgg_normal_switch="1"
+		scgg_normal_switch="1",
+		scgg_vanilla_disable="1",
+		scgg_extra_function="1"
+	}
+	HL2Options.Options["#Vanilla"] = {
+		scgg_enabled="2", 
+		scgg_allow_enablecvar_modify="0", 
+		scgg_cone="0", 
+		scgg_style="0", 
+		scgg_friendly_fire="0", 
+		scgg_affect_players="0", 
+		scgg_weapon_vaporize="0", 
+		scgg_primary_extra="0",
+		scgg_allow_others="0", 
+		scgg_keep_armor="0", 
+		scgg_claw_mode="0", 
+		scgg_light="0", 
+		scgg_muzzle_flash="0", 
+		scgg_zap="0", 
+		scgg_zap_sound="0", 
+		scgg_deploy_style="0", 
+		scgg_no_effects="0", 
+		scgg_equip_sound="0",
+		scgg_normal_switch="0",
+		scgg_vanilla_disable="0",
+		scgg_extra_function="0"
 	}
 	
 	panel:AddControl("ComboBox",HL2Options)

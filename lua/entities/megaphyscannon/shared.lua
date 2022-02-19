@@ -20,6 +20,7 @@ local function Deprecate_SpawnWep(pos, ang)
 	end
 	ent:Spawn()
 	ent:Activate()
+	return ent
 end
 
 function ENT:SpawnFunction(ply, tr)
@@ -36,9 +37,9 @@ function ENT:SpawnFunction(ply, tr)
 	--ent.ClawOpenState = false
 	ent.Planted = false*/
 	
-	Deprecate_SpawnWep(SpawnPos)
+	return Deprecate_SpawnWep(SpawnPos)
 	
-	return ent
+	--return ent
 end
 
 
@@ -127,7 +128,7 @@ function ENT:Think()
 		--net.WriteEntity( self )
 		--net.Send( player.GetAll() )
 	end--]]
-	/*if game.GetGlobalState("super_phys_gun") == GLOBAL_OFF and GetConVar("scgg_enabled"):GetInt() <= 0 and self.Entity.Fading != true then
+	/*if game.GetGlobalState("super_phys_gun") == GLOBAL_OFF and ConVarExists("scgg_enabled") and GetConVar("scgg_enabled"):GetInt() <= 0 and self.Entity.Fading != true then
 		self.Entity.Fading = true
 		--self.Entity:SetNWBool("scgg_spawn_into_old", false)
 		

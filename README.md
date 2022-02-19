@@ -1,4 +1,6 @@
 # GMOD_SCGG_Fixed
+This is currently the 18 Feb @ 10:36pm version on the workshop.
+
 NOTICE:
 
 With new features, comes new glitches. As I haven't really extensively tested it, the addon will have bugs. Make sure to report them either in my:
@@ -7,7 +9,7 @@ Steam discussion: https://steamcommunity.com/workshop/filedetails/discussion/550
 
 Workshop Addon: https://steamcommunity.com/sharedfiles/filedetails/?id=1641305846
 
-Issues tab of this github. :P
+Issues tab of this github.
 
 Installation:
 
@@ -30,5 +32,3 @@ OR
 
 Access the Steam Files, go to steamapps/common/GarrysMod/garrysmod/addons, and make a new folder called something like 'Super Gravity Gun'. Put the files into that created folder. 
 This method is more neater, but will require a restart if you've gotten your game open before the files were placed.
-
-This is currently the 5 Sep @ 11:18pm version on the workshop.

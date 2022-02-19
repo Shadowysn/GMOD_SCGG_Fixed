@@ -13,6 +13,7 @@ local function DissolveEntity(entity) -- The main dissolve function for dissolvi
 		if dissolver:GetClass() == "env_entity_dissolver" then
 			dissolver:Fire("Dissolve", "", 0, entity) -- If it exists, have it dissolve our given entity
 			hasdissolve = true -- and set this to true...
+			break
 		end
 	end
 	
@@ -29,16 +30,12 @@ local function DissolveEntity(entity) -- The main dissolve function for dissolvi
 end
 
 local function GlobalDissolve()
-	for _,wpn in pairs(ents.GetAll()) do
+	for _,wpn in ipairs(ents.GetAll()) do
 		wpn.SCGG_Dissolving = false -- Dissolve check.
-		--[[if IsValid(wpn) and wpn:IsWeapon() and !wpn:GetOwner():IsValid() then
-			wpn:SetKeyValue("spawnflags","2") 
-			-- ^ I don't know what I was trying to do with this.
-		end--]]
 			if IsValid(wpn) and wpn:IsValid() and ( wpn:IsWeapon() or wpn:GetClass() == "item_ammo_ar2_altfire" ) and !wpn:CreatedByMap() and 
 			(wpn:GetClass() != phys_string and wpn:GetClass() != superphys_string) then
 			-- ^ Valid check start
-				for _, child in pairs(wpn:GetChildren()) do
+				for _, child in ipairs(wpn:GetChildren()) do
 					if child:GetClass() == "env_entity_dissolver" then
 						wpn.SCGG_Dissolving = true
 						-- ^ Mark them as dissolving so we don't repeatedly try to dissolve an already vaporizing gun.
@@ -46,7 +43,8 @@ local function GlobalDissolve()
 					end
 				end
 				
-				if GetConVar("scgg_enabled"):GetInt() >= 2 and wpn:GetClass() == "item_ammo_ar2_altfire" then 
+				if ConVarExists("scgg_enabled") and GetConVar("scgg_enabled"):GetInt() >= 2 and 
+				wpn:GetClass() == "item_ammo_ar2_altfire" then 
 					-- ^ Check for scgg_enabled cvar num to be 2 and target being AR2 pulse ball ammo.
 					
 					local fakeitem = ents.Create("prop_physics_override") 
@@ -65,7 +63,9 @@ local function GlobalDissolve()
 					DissolveEntity(fakeitem)
 				elseif !wpn:GetOwner():IsValid() and wpn.SCGG_Dissolving == false then 
 					-- ^ Check if it's not in the hands of an NPC or Player, and not being dissolved.
+					wpn:SetKeyValue("spawnflags", "2")
 					DissolveEntity(wpn)
+					-- ^ This is to prevent still picking up the weapons by pressing USE on them.
 				end 
 				-- ^ Dissolve end.
 			end 
@@ -189,23 +189,31 @@ local Has1ChangedModifyCvar = false
 local HasVaporizeBeenSetFrom2 = true
 
 local function HasActiveGlobal()
-	if (!GetConVar("scgg_vanilla_disable"):GetBool() and game.GetGlobalState("super_phys_gun") == GLOBAL_ON) or 
-	(GetConVar("scgg_vanilla_disable"):GetBool() and game.GetGlobalState("super_phys_gun_mod") == GLOBAL_ON) then
+	local vanillaCvar = true
+	if ConVarExists("scgg_vanilla_disable") then
+		vanillaCvar = GetConVar("scgg_vanilla_disable"):GetBool()
+	end
+	if (!vanillaCvar and game.GetGlobalState("super_phys_gun") == GLOBAL_ON) or 
+	(vanillaCvar and game.GetGlobalState("super_phys_gun_mod") == GLOBAL_ON) then
 		return true
 	end
 	return false
 end
 
 local function HasInvalidGlobal()
-	if (GetConVar("scgg_vanilla_disable"):GetBool() and game.GetGlobalState("super_phys_gun") == GLOBAL_ON) or 
-	(!GetConVar("scgg_vanilla_disable"):GetBool() and game.GetGlobalState("super_phys_gun_mod") == GLOBAL_ON) then
+	local vanillaCvar = true
+	if ConVarExists("scgg_vanilla_disable") then
+		vanillaCvar = GetConVar("scgg_vanilla_disable"):GetBool()
+	end
+	if (vanillaCvar and game.GetGlobalState("super_phys_gun") == GLOBAL_ON) or 
+	(vanillaCvar and game.GetGlobalState("super_phys_gun_mod") == GLOBAL_ON) then
 		return true
 	end
 	return false
 end
 
 local function SetActiveGlobal(state)
-	if GetConVar("scgg_vanilla_disable"):GetBool() then
+	if !ConVarExists("scgg_vanilla_disable") or GetConVar("scgg_vanilla_disable"):GetBool() then
 		game.SetGlobalState("super_phys_gun_mod", state)
 	else
 		game.SetGlobalState("super_phys_gun", state)
@@ -226,10 +234,15 @@ if cvars.GetConVarCallbacks("scgg_extra_function", false) != nil then
 	cvars.RemoveChangeCallback("scgg_extra_function", "SCGG_Cvar_Notify")
 end
 cvars.AddChangeCallback( "scgg_extra_function", function( convar_name, value_old, value_new ) -- < No other reason for this to exist than notifying about scgg_vanilla_disable
+	local vanillaCvar = true
+	if ConVarExists("scgg_vanilla_disable") then
+		vanillaCvar = GetConVar("scgg_vanilla_disable"):GetBool()
+	end
+	
 	local new_cvar_val = tonumber(value_new)
-	if new_cvar_val > 0 and !GetConVar("scgg_vanilla_disable"):GetBool() then
+	if new_cvar_val > 0 and vanillaCvar then
 		print("It is recommended to also set scgg_vanilla_disable to 1 if you want just the mod's SCGG functionality.")
-	elseif new_cvar_val <= 0 and GetConVar("scgg_vanilla_disable"):GetBool() then
+	elseif new_cvar_val <= 0 and vanillaCvar then
 		print("It is recommended to also set scgg_vanilla_disable to 0 if you want just Gmod's vanilla SCGG functionality.")
 	end
 end, "SCGG_Cvar_Notify" )
@@ -242,9 +255,14 @@ cvars.AddChangeCallback( "scgg_vanilla_disable", function( convar_name, value_ol
 	local new_cvar_val = tonumber(value_new)
 	ConvertGlobal(new_cvar_val)
 	
-	if new_cvar_val > 0 and !GetConVar("scgg_extra_function"):GetBool() then
+	local extraCvar = false
+	if ConVarExists("scgg_extra_function") then
+		extraCvar = GetConVar("scgg_extra_function"):GetBool()
+	end
+	
+	if new_cvar_val > 0 and extraCvar then
 		print("It is recommended to also set scgg_extra_function to 1 if you want just the mod's SCGG functionality.")
-	elseif  new_cvar_val <= 0 and GetConVar("scgg_extra_function"):GetBool() then
+	elseif  new_cvar_val <= 0 and extraCvar then
 		print("It is recommended to also set scgg_extra_function to 0 if you want just Gmod's vanilla SCGG functionality.")
 	end
 	
@@ -254,21 +272,26 @@ cvars.AddChangeCallback( "scgg_vanilla_disable", function( convar_name, value_ol
 end, "SCGG_Vanilla_Disable" )
 
 hook.Add("OnEntityCreated", "SCGG_Trigger_AddOutput", function( trigger ) 
-	if !GetConVar("scgg_extra_function"):GetBool() then return end
+	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	
-	if IsValid(trigger) and trigger:GetClass() == superphys_string and !trigger.Fading and GetConVar("scgg_enabled"):GetInt() <= 0 then
+	local enabledCvar = 1
+	if ConVarExists("scgg_enabled") then
+		enabledCvar = GetConVar("scgg_enabled"):GetInt()
+	end
+	
+	if IsValid(trigger) and trigger:GetClass() == superphys_string and !trigger.Fading and enabledCvar <= 0 then
 		trigger:Discharge()
 	end
 --for _,trigger in pairs(GetEnts) do
 	if IsValid(trigger) and trigger:GetClass() == "trigger_weapon_dissolve" then
-		if ConVarExists("scgg_enabled") and GetConVar("scgg_enabled"):GetInt() >= 2 and
-		(!ConVarExists("scgg_allow_enablecvar_modify") or GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0)
+		if enabledCvar >= 2 and
+		ConVarExists("scgg_allow_enablecvar_modify") and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0
 		then
 			GetConVar("scgg_enabled"):SetInt(0)
 		end
-		local vcvar_num = GetConVar("scgg_weapon_vaporize"):GetInt()
-		if ConVarExists("scgg_weapon_vaporize") and vcvar_num > 0 then
-			if vcvar_num >= 2 then
+		
+		if ConVarExists("scgg_weapon_vaporize") and GetConVar("scgg_weapon_vaporize"):GetInt() > 0 then
+			if GetConVar("scgg_weapon_vaporize"):GetInt() >= 2 then
 				HasVaporizeBeenSetFrom2 = true
 			else
 				HasVaporizeBeenSetFrom2 = false
@@ -322,7 +345,7 @@ local think_Tick = 0
 
 hook.Add("Think","SCGG_Global_Think",function() 
 	-- ^ Start of think hook
-	if !GetConVar("scgg_extra_function"):GetBool() then return end
+	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	
 	if think_Tick < 1 then
 		think_Tick = think_Tick + 0.25
@@ -332,23 +355,32 @@ hook.Add("Think","SCGG_Global_Think",function()
 	end
 	-- ^ Reduces how often this think hook's functions are exec'd
 	
-	if HasInvalidGlobal() then
+	if ConVarExists("scgg_vanilla_disable") and HasInvalidGlobal() then
 		ConvertGlobal(GetConVar("scgg_vanilla_disable"):GetInt())
 	end
 	
-	if (GetConVar("scgg_weapon_vaporize"):GetInt() > 0 and GetConVar("scgg_weapon_vaporize"):GetInt() < 2) then
+	if (ConVarExists("scgg_weapon_vaporize") and 
+	GetConVar("scgg_weapon_vaporize"):GetInt() > 0 and GetConVar("scgg_weapon_vaporize"):GetInt() < 2) then
 		-- ^ Start of vaporize cvar check
 		GlobalDissolve()
 	end
 	-- ^ End of vaporize cvar check
-	if (HasActiveGlobal() or GetConVar("scgg_enabled"):GetInt() >= 2) then 
+	
+	local hasCvarEnabled = ConVarExists("scgg_enabled")
+	local hasCvarModify = ConVarExists("scgg_allow_enablecvar_modify")
+	local enabledCvar = 1
+	if hasCvarEnabled then
+		enabledCvar = GetConVar("scgg_enabled"):GetInt()
+	end
+	
+	if HasActiveGlobal() or enabledCvar >= 2 then 
 	-- ^ Check if global state turned on and cvar is not 1
-		if GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
+		if hasCvarModify and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
 			GetConVar("scgg_enabled"):SetInt(2)
 		end
 	end
 	
-	if !HasActiveGlobal() and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
+	if hasCvarEnabled and hasCvarModify and !HasActiveGlobal() and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
 	-- ^ Check if global state turned off and cvar is not 0
 		GetConVar("scgg_enabled"):SetInt(0)
 	end
@@ -357,7 +389,7 @@ end)
 -- ^ End of think hook.
 
 hook.Add("PostEntityTakeDamage","SCGG_NPC_Death_Post",function( ent, dmg )
-	if !GetConVar("scgg_extra_function"):GetBool() then return end
+	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	
 	if IsValid(ent) and 
 	(
@@ -366,15 +398,16 @@ hook.Add("PostEntityTakeDamage","SCGG_NPC_Death_Post",function( ent, dmg )
 	--(ent:IsPlayer() and !ent:Alive())
 	)
 	and 
-	GetConVar("scgg_weapon_vaporize"):GetInt() >= 2 then
+	ConVarExists("scgg_weapon_vaporize") and GetConVar("scgg_weapon_vaporize"):GetInt() >= 2 then
 		GlobalDissolve()
 	end
 end)
 
 hook.Add("PostPlayerDeath","SCGG_Weapon_DropVaporize",function( ply )
-	if !GetConVar("scgg_extra_function"):GetBool() then return end
+	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	
-	if IsValid(ply) and !ply:Alive() and GetConVar("scgg_weapon_vaporize"):GetInt() >= 2 then
+	if IsValid(ply) and !ply:Alive() and 
+	ConVarExists("scgg_weapon_vaporize") and GetConVar("scgg_weapon_vaporize"):GetInt() >= 2 then
 		GlobalDissolve()
 	end
 	--[[if ply:HasWeapon(superphys_string) then
@@ -402,7 +435,10 @@ local function EquipGravGuns(wep, ply, isPlayerSpawn)
 		end)
 	end
 	
-	local switch_cvar = GetConVar("scgg_normal_switch"):GetBool()
+	local switch_cvar = false
+	if ConVarExists("scgg_normal_switch") then
+		switch_cvar = GetConVar("scgg_normal_switch"):GetBool()
+	end
 	local class = wep:GetClass()
 	--print(class)
 	--return
@@ -437,7 +473,10 @@ local function DropGravGuns(wep, ply)
 		ply.SCGG_Dropping = nil
 	end)
 	
-	local switch_cvar = GetConVar("scgg_normal_switch"):GetBool()
+	local switch_cvar = false
+	if ConVarExists("scgg_normal_switch") then
+		switch_cvar = GetConVar("scgg_normal_switch"):GetBool()
+	end
 	
 	local class = wep:GetClass()
 	if class == phys_string then
@@ -478,10 +517,10 @@ end
 -- Otherwise weapons could disappear and never be brought back without spawnmenu.
 hook.Add("PlayerDroppedWeapon","SCGG_Weapon_CheckDrop",function(owner, wep) -- For when a player drops a weapon
 -- ^ Remove the other gravity gun if one is dropped.
-	if !GetConVar("scgg_extra_function"):GetBool() then return end
+	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	if !IsValid(owner) then return end
 	
-	if GetConVar("scgg_enabled"):GetInt() >= 2 and !owner.SCGG_Dropping then
+	if ConVarExists("scgg_enabled") and GetConVar("scgg_enabled"):GetInt() >= 2 and !owner.SCGG_Dropping then
 		-- If one variant is dropped, remove the other variant.
 		DropGravGuns(wep, owner)
 	end
@@ -489,7 +528,7 @@ end)
 
 hook.Add("WeaponEquip","SCGG_Weapon_Pickup",function(wep, ply)-- For when a player picks up a weapon.
 	-- ^ Give the other variant to people that own one of them, if the other variant does not exist.
-	if !GetConVar("scgg_extra_function"):GetBool() then return end
+	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	--[[local class = wep:GetClass()
 	local function HasWeaponOrEquipped(wep_str)
 		-- Doesn't work, will create annoying overflows. Use player spawn hook for everything instead.
@@ -503,16 +542,16 @@ hook.Add("WeaponEquip","SCGG_Weapon_Pickup",function(wep, ply)-- For when a play
 	print("Normal:")
 	print(HasWeaponOrEquipped(phys_string))--]]
 	--if GetConVar("scgg_enabled"):GetInt() >= 2 and (!HasWeaponOrEquipped(superphys_string) or !HasWeaponOrEquipped(phys_string)) then
-	if GetConVar("scgg_enabled"):GetInt() >= 2 then
+	if ConVarExists("scgg_enabled") and GetConVar("scgg_enabled"):GetInt() >= 2 then
 		EquipGravGuns(wep, ply)
 	end
 end)
 
 hook.Add("PlayerLoadout","SCGG_Spawn_Weapon",function(ply, isTransition)-- For when a player spawns.
-	if !GetConVar("scgg_extra_function"):GetBool() then return end
+	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	--print(isTransition)
 	timer.Simple(0, function()
-		if GetConVar("scgg_enabled"):GetInt() >= 2 and !isTransition then
+		if ConVarExists("scgg_enabled") and GetConVar("scgg_enabled"):GetInt() >= 2 and !isTransition then
 			for _,wep in pairs(ply:GetWeapons()) do
 				if IsValid(wep) then
 					EquipGravGuns(wep, ply, true)
@@ -529,15 +568,17 @@ if cvars.GetConVarCallbacks("physcannon_mega_enabled", false) != nil then
 end
 cvars.AddChangeCallback( "physcannon_mega_enabled", function( convar_name, value_old, value_new )
 	-- ^ Support for physcannon_mega_enabled cvar.
+	if !ConVarExists("scgg_enabled") then return end
+	
 	local new_cvar_val = tonumber(value_new)
 	
-	/*if GetConVar("scgg_vanilla_disable"):GetBool() then
+	if !ConVarExists("scgg_vanilla_disable") or GetConVar("scgg_vanilla_disable"):GetBool() then
 		if new_cvar_val > 0 then
 			print("WARNING! scgg_vanilla_disable is active, however, physcannon_mega_enabled is hardcoded to activate the vanilla Super Gravity Gun no matter what.")
 			print("Use scgg_enabled instead.")
 		end
 		return
-	end*/
+	end
 	
 	if new_cvar_val > 0 then
 		GetConVar("scgg_enabled"):SetInt(2)
@@ -552,7 +593,7 @@ if cvars.GetConVarCallbacks("scgg_normal_switch", false) != nil then
 end
 cvars.AddChangeCallback( "scgg_normal_switch", function( convar_name, value_old, value_new )
 	-- ^ Handle changing of scgg_normal_switch cvar.
-	if GetConVar("scgg_enabled"):GetInt() < 2 then return end
+	if !ConVarExists("scgg_enabled") or GetConVar("scgg_enabled"):GetInt() < 2 then return end
 	
 	local all_ply = player.GetAll()
 	local switch_cvar = tonumber(value_new)
@@ -579,30 +620,32 @@ if cvars.GetConVarCallbacks("scgg_enabled", false) != nil then
 end
 cvars.AddChangeCallback( "scgg_enabled", function( convar_name, value_old, value_new )
 	local all_ply = player.GetAll()
-	
 	-- ^ Checks for scgg enabled cvar change.
-	local vcvar_num = GetConVar("scgg_weapon_vaporize"):GetInt()
+	
+	local vaporCvar = 0
+	if ConVarExists("scgg_weapon_vaporize") then
+		vaporCvar = GetConVar("scgg_weapon_vaporize"):GetInt()
+	end
+	
 	local enablecvar = tonumber(value_new)
 	if enablecvar >= 2 then
-		if Has1ChangedModifyCvar == true then
+		if ConVarExists("scgg_allow_enablecvar_modify") and Has1ChangedModifyCvar == true then
 			GetConVar("scgg_allow_enablecvar_modify"):SetInt(1)
 			Has1ChangedModifyCvar = false
 		end
 		SetActiveGlobal( GLOBAL_ON )
-		local vcvar_num = GetConVar("scgg_weapon_vaporize"):GetInt()
-		if ConVarExists("scgg_weapon_vaporize") then
-			if vcvar_num <= 0 then
-				if HasVaporizeBeenSetFrom2 then
-					GetConVar("scgg_weapon_vaporize"):SetInt(2)
-				else
-					GetConVar("scgg_weapon_vaporize"):SetInt(1)
-				end
-				HasVaporizeBeenSetFrom2 = false
+		
+		if vaporCvar <= 0 then
+			if HasVaporizeBeenSetFrom2 then
+				GetConVar("scgg_weapon_vaporize"):SetInt(2)
+			else
+				GetConVar("scgg_weapon_vaporize"):SetInt(1)
 			end
+			HasVaporizeBeenSetFrom2 = false
 		end
 		
 		-- Check for players that have one variant of the gravity gun
-		if enablecvar >= 2 then
+		if enablecvar >= 2 and (!ConVarExists("scgg_extra_function") or GetConVar("scgg_extra_function"):GetBool()) then
 			for _,ply in pairs(all_ply) do
 				if IsValid(ply) and (!ply:HasWeapon(phys_string) or !ply:HasWeapon(superphys_string)) then
 				-- ^ If player is valid, and either doesn't have normal or super variant...
@@ -616,12 +659,12 @@ cvars.AddChangeCallback( "scgg_enabled", function( convar_name, value_old, value
 		end
 	elseif (enablecvar < 2) then
 		--SetActiveGlobal( GLOBAL_ON )
-		if (enablecvar > 0) and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
+		if enablecvar > 0 and ConVarExists("scgg_allow_enablecvar_modify") and GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0 then
 			GetConVar("scgg_allow_enablecvar_modify"):SetInt(0)
 			Has1ChangedModifyCvar = true
 		end
-		if ConVarExists("scgg_weapon_vaporize") and vcvar_num > 0 then
-			if vcvar_num >= 2 then
+		if vaporCvar > 0 then
+			if vaporCvar >= 2 then
 				HasVaporizeBeenSetFrom2 = true
 			else
 				HasVaporizeBeenSetFrom2 = false
@@ -658,21 +701,24 @@ cvars.AddChangeCallback( "scgg_enabled", function( convar_name, value_old, value
 		
 		for _,ply in pairs(all_ply) do
 		-- ^ Armor drainage.
-			local getcvar = GetConVar("scgg_keep_armor"):GetInt()
-			if getcvar <= 1 and ply:IsValid() and ply:Alive() and ply:Armor() >= 1 then
+			local armorCvar = 2
+			if ConVarExists("scgg_keep_armor") then
+				armorCvar = GetConVar("scgg_keep_armor"):GetInt()
+			end
+			if armorCvar <= 1 and ply:IsValid() and ply:Alive() and ply:Armor() >= 1 then
 			-- ^ Won't run of
 				local armorval_0 = ply:Armor()+1
 				local armor_countdown = ply:Armor()
 				local armor_reference = ply:Armor() -- Used to prevent added armor being removed. Although, doesn't work very well...
-				if (getcvar > 0 and getcvar < 2) and armor_reference <= 100 then return end
+				if (armorCvar > 0 and armorCvar < 2) and armor_reference <= 100 then return end
 				timer.Create( "SCGG_Armor_Lower", 0.01, armorval_0/2, function()
 					if (armor_reference % 2 == 0) then
-					armor_countdown = armor_countdown-2
+						armor_countdown = armor_countdown-2
 					else
-					armor_countdown = armor_countdown-1
+						armor_countdown = armor_countdown-1
 					end
-					if (getcvar <= 0 or getcvar >= 2) and ply:Armor() <= 0 -- If cvar is not just 1 (safety measure) and armor is 0...
-					or (getcvar > 0 and getcvar < 2) and ply:Armor() <= 100 -- or cvar is 1 and armor is 100...
+					if (armorCvar <= 0 or armorCvar >= 2) and ply:Armor() <= 0 -- If cvar is not just 1 (safety measure) and armor is 0...
+					or (armorCvar > 0 and armorCvar < 2) and ply:Armor() <= 100 -- or cvar is 1 and armor is 100...
 					then 
 					timer.Remove("SCGG_Armor_Lower") -- Stop draining.
 					return 
