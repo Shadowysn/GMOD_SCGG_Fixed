@@ -1,5 +1,5 @@
 # GMOD_SCGG_Fixed
-This is currently the 18 Feb @ 10:36pm version on the workshop.
+This is currently the 4 May @ 2:20pm version on the workshop.
 
 NOTICE:
 
