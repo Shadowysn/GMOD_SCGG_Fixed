@@ -195,8 +195,10 @@ local function HasActiveGlobal()
 	end
 	if (!vanillaCvar and game.GetGlobalState("super_phys_gun") == GLOBAL_ON) or 
 	(vanillaCvar and game.GetGlobalState("super_phys_gun_mod") == GLOBAL_ON) then
+		--print("HasActiveGlobal is true")
 		return true
 	end
+	--print("HasActiveGlobal is false")
 	return false
 end
 
@@ -206,7 +208,7 @@ local function HasInvalidGlobal()
 		vanillaCvar = GetConVar("scgg_vanilla_disable"):GetBool()
 	end
 	if (vanillaCvar and game.GetGlobalState("super_phys_gun") == GLOBAL_ON) or 
-	(vanillaCvar and game.GetGlobalState("super_phys_gun_mod") == GLOBAL_ON) then
+	(!vanillaCvar and game.GetGlobalState("super_phys_gun_mod") == GLOBAL_ON) then
 		return true
 	end
 	return false
@@ -220,13 +222,15 @@ local function SetActiveGlobal(state)
 	end
 end
 
-local function ConvertGlobal(number)
-	if number > 0 then
+local function ConvertGlobal(vanillaDis)
+	if vanillaDis == true then
 		game.SetGlobalState("super_phys_gun_mod", game.GetGlobalState("super_phys_gun"))
 		game.SetGlobalState("super_phys_gun", GLOBAL_OFF)
-	elseif number <= 0 then
+		--print("global set to super_phys_gun_mod")
+	else
 		game.SetGlobalState("super_phys_gun", game.GetGlobalState("super_phys_gun_mod"))
 		game.SetGlobalState("super_phys_gun_mod", GLOBAL_OFF)
+		--print("global set to super_phys_gun")
 	end
 end
 
@@ -356,7 +360,7 @@ hook.Add("Think","SCGG_Global_Think",function()
 	-- ^ Reduces how often this think hook's functions are exec'd
 	
 	if ConVarExists("scgg_vanilla_disable") and HasInvalidGlobal() then
-		ConvertGlobal(GetConVar("scgg_vanilla_disable"):GetInt())
+		ConvertGlobal(GetConVar("scgg_vanilla_disable"):GetBool())
 	end
 	
 	if (ConVarExists("scgg_weapon_vaporize") and 

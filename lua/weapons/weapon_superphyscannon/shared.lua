@@ -133,15 +133,15 @@ end--]]
 local function DetermineHoldType(swep)
 	if !IsValid(swep.Owner) then return end
 	
-	if swep.Owner:IsPlayer() then
-		swep.Weapon:SetHoldType( swep.HoldType )
-	elseif swep.Owner:IsNPC() then
+	if swep.Owner:IsNPC() then
 		swep.Weapon:SetHoldType( "shotgun" )
 		if SERVER then
 			if swep.Owner:Classify() == CLASS_METROPOLICE then
 				swep.Weapon:SetHoldType( "smg" )
 			end
 		end
+	else
+		swep.Weapon:SetHoldType( swep.HoldType )
 	end
 end
 
@@ -253,15 +253,7 @@ function SWEP:SetTP(entity)
 	self:SetNWEntity("SCGG_TP", entity)
 end
 
-if SERVER then
-	function SWEP:Initialize() -- Initialization stuff.
-		DetermineHoldType(self)
-		self:SetSkin(1)
-		InitChangeableVars()
-	end
-end
-
-local function InitChangeableVars()
+local function InitChangeableVars(self)
 	--self.ClawOpenState = false
 	self.Fading = false
 	self.CoreAllowRemove = true
@@ -271,6 +263,14 @@ local function InitChangeableVars()
 	self.HPBone = nil
 	self.OnDropOwner = nil
 	--self.oldHP = nil
+end
+
+if SERVER then
+	function SWEP:Initialize() -- Initialization stuff.
+		DetermineHoldType(self)
+		self:SetSkin(1)
+		InitChangeableVars(self)
+	end
 end
 	
 --[[function SWEP:OpenClaws( boolean ) -- Open claws function.
@@ -400,7 +400,7 @@ function SWEP:CloseClaws( boolean ) -- Close claws function.
 	end
 end--]]
 
-local function TimerDestroyAll() -- DESTROY ALL TIMERS! DESTROY ALL TIMERS!
+local function TimerDestroyAll(self) -- DESTROY ALL TIMERS! DESTROY ALL TIMERS!
 	timer.Remove("deploy_idle"..self:EntIndex())
 	timer.Remove("attack_idle"..self:EntIndex())
 	timer.Remove("scgg_move_claws_open"..self:EntIndex())
@@ -447,8 +447,8 @@ local function DirectCheck(self, tgt) -- Check if can be punted/grabbed, but wit
 			(
 				--(
 					tgt:IsNPC()
-					--or
-					--tgt:IsNextBot()
+					or
+					tgt:IsNextBot()
 				--)
 				and
 				(
@@ -587,7 +587,7 @@ function SWEP:GetConeEnt(trace) -- Punting check. Use like IsValid() but with a 
 			if ent:GetClass() == "prop_combine_ball" then
 				local temp_tbl = { ent }
 				table.Add(combineball_cone_tbl, temp_tbl)
-			elseif (ent:IsNPC() and ent:Health() > 0 and 
+			elseif ((ent:IsNPC() or ent:IsNextBot()) and ent:Health() > 0 and 
 			((!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC( tgt ) )) 
 			or (ent:IsPlayer() and ent:Alive()) then
 				local temp_tbl = { ent }
@@ -1042,7 +1042,7 @@ function SWEP:AllowedClass(ent)
 	end -- Not yet fully tested
 	if ConVarExists("scgg_affect_players") and !GetConVar("scgg_affect_players"):GetBool() and IsValid(self.Owner) and self.Owner:IsPlayer() and ent:IsPlayer() then return false end
 	
-	if !ent:IsNPC() and !ent:IsPlayer() and !ent:IsRagdoll() and ConVarExists("scgg_allow_others") and GetConVar("scgg_allow_others"):GetBool() and !self:NotAllowedClass(ent) then
+	if !ent:IsNPC() and !ent:IsPlayer() and !ent:IsNextBot() and !ent:IsRagdoll() and ConVarExists("scgg_allow_others") and GetConVar("scgg_allow_others"):GetBool() and !self:NotAllowedClass(ent) then
 		return true
 	end
 	
@@ -1295,7 +1295,7 @@ function SWEP:PrimaryAttack()
 					net.WriteEntity( self.Owner )
 					net.Broadcast()--]]
 					tgt:TakeDamageInfo( dmginfo )
-				elseif tgt:IsNPC() then
+				elseif tgt:IsNPC() or tgt:IsNextBot() then
 					if tgt:GetShouldServerRagdoll() != true then
 						tgt:SetShouldServerRagdoll( true )
 					end
@@ -1437,7 +1437,7 @@ function SWEP:PrimaryAttack()
 						tgt:Spectate(OBS_MODE_CHASE)
 					end
 	
-				elseif tgt:IsNPC() then
+				elseif tgt:IsNPC() or tgt:IsNextBot() then
 					--if tgt:Health() >= 1 then
 					tgt:Fire("Kill","",0)
 					--net.Start( "PlayerKilledNPC" )
@@ -1549,8 +1549,7 @@ function SWEP:PrimaryAttack()
 	end
 	
 	if tgt:IsRagdoll() then
-		if (SERVER) then
-		
+		if SERVER then
 			--[[for i = 1, tgt:GetPhysicsObjectCount() do
 				local bone = tgt:GetPhysicsObjectNum(i)
 				
@@ -1562,32 +1561,33 @@ function SWEP:PrimaryAttack()
 			tgt:SetPhysicsAttacker(self.Owner, 10)
 			
 			if zapCvar then
-				tgt:Fire("StartRagdollBoogie","",0) end
-				--RagdollVisual(tgt, 1)
-				tgt:SCGG_RagdollZapper()
+				tgt:Fire("StartRagdollBoogie","",0)
 			end
-			tgt:SCGG_RagdollCollideTimer()
-			
-			for i = 1, tgt:GetPhysicsObjectCount() do
-				local bone = tgt:GetPhysicsObjectNum(i)
-				
-				if bone and bone.IsValid and bone:IsValid() then
-					if !styleCvar then
-						bone:AddVelocity(self.Owner:GetAimVector()*(10000/8))
-					else--/(tgt:GetPhysicsObject():GetMass()/200)) else
-						bone:AddVelocity(self.Owner:GetAimVector()*(tgt:GetPhysicsObject():GetMass()*self.PuntMultiply)) 
-					end
-				end
-			end
-			
-			--timer.Remove( "SCGG_Ragdoll_Collision_Timer"..self:EntIndex() )
-			tgt:SetCollisionGroup( self.HPCollideG )
-			--[[timer.Create( "SCGG_Ragdoll_Collision_Timer"..self:EntIndex(), 2, 1, function() 
-				if IsValid(tgt) then
-				tgt:SetCollisionGroup(COLLISION_GROUP_WEAPON)
-				end
-			end )--]]
 		end
+		--RagdollVisual(tgt, 1)
+		tgt:SCGG_RagdollZapper()
+		tgt:SCGG_RagdollCollideTimer()
+		
+		for i = 1, tgt:GetPhysicsObjectCount() do
+			local bone = tgt:GetPhysicsObjectNum(i)
+			
+			if bone and bone.IsValid and bone:IsValid() then
+				if !styleCvar then
+					bone:AddVelocity(self.Owner:GetAimVector()*(10000/8))
+				else--/(tgt:GetPhysicsObject():GetMass()/200)) else
+					bone:AddVelocity(self.Owner:GetAimVector()*(tgt:GetPhysicsObject():GetMass()*self.PuntMultiply)) 
+				end
+			end
+		end
+		
+		--timer.Remove( "SCGG_Ragdoll_Collision_Timer"..self:EntIndex() )
+		tgt:SetCollisionGroup( self.HPCollideG )
+		--[[timer.Create( "SCGG_Ragdoll_Collision_Timer"..self:EntIndex(), 2, 1, function() 
+			if IsValid(tgt) then
+			tgt:SetCollisionGroup(COLLISION_GROUP_WEAPON)
+			end
+		end )--]]
+	end
 	
 	if self:AllowedClass(tgt) and !tgt:IsRagdoll() and SERVER then
 		local damageinfo = DamageInfo()
@@ -1771,9 +1771,9 @@ function SWEP:SecondaryAttack()
 	
 	if ( !styleCvar ) 
 	and 
-	( ( tgt:IsNPC() or tgt:IsPlayer() ) and tgt:Health() > self:GetMaxTargetHealth() ) 
+	( ( tgt:IsNPC() or tgt:IsNextBot() or tgt:IsPlayer() ) and tgt:Health() > self:GetMaxTargetHealth() ) 
 	or ( tgt:IsNPC() and tgt:GetClass() == "npc_bullseye" )
-	or ( (tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and !util.IsValidRagdoll(tgt:GetModel()) and !util.IsValidProp(tgt:GetModel()) ) 
+	or ( (tgt:IsNPC() or tgt:IsNextBot() or tgt:IsPlayer() or tgt:IsRagdoll() ) and !util.IsValidRagdoll(tgt:GetModel()) and !util.IsValidProp(tgt:GetModel()) ) 
 	--or ( tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and ( styleCvar <= 0 and tgt:GetMass() > self.HL2MaxMass or styleCvar > 0 and tgt:GetMass() > self.MaxMass ) -- Non-functioning
 	then return end
 	
@@ -1824,7 +1824,7 @@ function SWEP:SecondaryAttack()
 			--return
 		--end
 		
-		if tgt:IsNPC() and (
+		if tgt:IsNPC() or tgt:IsNextBot() and (
 		(!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC(tgt) ) 
 		or tgt:IsPlayer() then
 			if tgt:IsPlayer() then
@@ -1841,7 +1841,7 @@ function SWEP:SecondaryAttack()
 				net.WriteString( "weapon_superphyscannon" )
 				net.WriteEntity( self.Owner )
 				net.Broadcast()--]]
-			elseif tgt:IsNPC() then
+			elseif tgt:IsNPC() or tgt:IsNextBot() then
 				if tgt:GetShouldServerRagdoll() != true then
 					tgt:SetShouldServerRagdoll( true )
 				end
@@ -2407,7 +2407,7 @@ end
 
 if SERVER then
 function SWEP:Deploy()
-	InitChangeableVars()
+	InitChangeableVars(self)
 	
 	self.OnDropOwner = self.Owner
 	
@@ -2419,7 +2419,7 @@ function SWEP:Deploy()
 		net.Send( self.Owner )
 	end--]]
 	--self:CoreEffect()
-	TimerDestroyAll()
+	TimerDestroyAll(self)
 	
 	--[[local claw_mode_cvar = GetConVar("scgg_claw_mode"):GetInt()
 	if claw_mode_cvar <= 0 then
@@ -2483,7 +2483,7 @@ function SWEP:Holster()
 	if IsValid(HP) and self.Owner:Health() > 0 then
 		return false
 	end
-	TimerDestroyAll()
+	TimerDestroyAll(self)
 	--[[if SERVER then
 		if IsValid(self.Owner:GetWeapon("weapon_physcannon")) then
 			local ply = self.Owner
