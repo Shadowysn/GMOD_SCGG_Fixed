@@ -57,7 +57,7 @@ function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
 	surface.DrawText("m")
 end
 
-local GetRag = {} -- For some infathomable reason, putting this in cl_scgg_autorun doesn't work.
+--[[local GetRag = {} -- For some infathomable reason, putting this in cl_scgg_autorun doesn't work.
 
 net.Receive("SCGG_Ragdoll_GetPlayerColor", function() 
 	local rag = net.ReadInt(32)
@@ -81,7 +81,7 @@ hook.Add("NetworkEntityCreated","SCGG_Ragdoll_SetPlayerColor",function(ent)
 		
 		GetRag = {}
 	end
-end)
+end)--]]
 
 include("cl_glow_spr.lua")
 

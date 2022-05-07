@@ -12,23 +12,31 @@ CreateClientConVar( "cl_scgg_physgun_color", "0", true, true,
 CreateClientConVar( "cl_scgg_effects_mode", "0", true, true, 
 	"Set the effect style to emulate from a game. Third-person is not affected. 0 = Half-Life 2, 1 = Half-Life 2 Survivor" )
 
-/*local GetRag = {}
+local GetRag = {}
 
 net.Receive("SCGG_Ragdoll_GetPlayerColor", function() 
 	local rag = net.ReadInt(32)
+	local ply = net.ReadInt(32)
 	local col = net.ReadVector()
 	if !col or col == nil then return end
-	GetRag = {rag = rag, col = col}
+	GetRag = {rag = rag, ply = ply, col = col}
 end)
 
-hook.Add("NetworkEntityCreated","SCGG_Ragdoll_SetPlayerColor",function(ent)
+hook.Add("NetworkEntityCreated","SCGG_Ragdoll_SetPlayerColor", function(ent)
 	if not GetRag.rag then return end
 	if GetRag.rag == ent:EntIndex() then
 		local getcol = GetRag.col
-		Entity(GetRag.rag).GetPlayerColor = function(self) return getcol end
+		local getrag_ply = Entity(GetRag.ply)
+		local getrag_rag = Entity(GetRag.rag)
+		getrag_rag.GetPlayerColor = function(self) return getcol end
+		
+		if IsValid(getrag_ply) and getrag_ply:GetModel() == getrag_rag:GetModel() then
+			getrag_rag:SnatchModelInstance(getrag_ply)
+		end
+		
 		GetRag = {}
 	end
-end)*/
+end)
 
 local function DoParticleEffects(entity)
 	--[[local coreattachmentID = entity:LookupAttachment("core")

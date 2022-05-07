@@ -590,8 +590,8 @@ function SWEP:GetConeEnt(trace) -- Punting check. Use like IsValid() but with a 
 			if ent:GetClass() == "prop_combine_ball" then
 				local temp_tbl = { ent }
 				table.Add(combineball_cone_tbl, temp_tbl)
-			elseif ((ent:IsNPC() or ent:IsNextBot()) and ent:Health() > 0 and 
-			((!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC( tgt ) )) 
+			elseif ((ent:IsNPC() or ent:IsNextBot()) and 
+			((!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC(ent) )) 
 			or (ent:IsPlayer() and ent:Alive()) then
 				local temp_tbl = { ent }
 				table.Add(living_cone_tbl, temp_tbl)
@@ -1271,7 +1271,7 @@ local function AttackAffectTarget(self, tgt, isPunt)
 	end
 	
 	-- Just in case the NPC is scripted like VJ Base
-	if IsValid(tgt:GetActiveWeapon()) then
+	if (tgt:IsNPC() or tgt:IsPlayer()) and IsValid(tgt:GetActiveWeapon()) then
 		local wep = tgt:GetActiveWeapon()
 		local wepclass = wep:GetClass()
 		
@@ -1323,6 +1323,7 @@ local function AttackAffectTarget(self, tgt, isPunt)
 		end
 		net.Start("SCGG_Ragdoll_GetPlayerColor")
 		net.WriteInt(ragdoll:EntIndex(),32)
+		net.WriteInt(tgt:EntIndex(),32)
 		net.WriteVector(tgt:GetPlayerColor())
 		net.Send(player.GetAll())
 	elseif tgt:IsNPC() or tgt:IsNextBot() then
@@ -1600,17 +1601,17 @@ function SWEP:DropAndShoot()
 	if SERVER then HP:Fire("EnablePhyscannonPickup","",1) end
 	
 	local HPHealth = HP:Health()
-	if HPHealth > 0 and self.HPHealth > 0 then
+	if HPHealth != nil and HPHealth > 0 and self.HPHealth != nil and self.HPHealth > 0 then
 		HP:SetHealth(self.HPHealth)
 		self.HPHealth = -1
 	end
 	
-	if HP:IsRagdoll() then
-		HP:SetCollisionGroup( COLLISION_GROUP_NONE )
-	else
-		HP:SetCollisionGroup( self.HPCollideG )
-	end
 	if SERVER then
+		if HP:IsRagdoll() then
+			HP:SetCollisionGroup( COLLISION_GROUP_NONE )
+		else
+			HP:SetCollisionGroup( self.HPCollideG )
+		end
 		HP:SetPhysicsAttacker(self.Owner, 10)
 		--HP:SetNWBool("launched_by_scgg", true)
 		self.Owner:SimulateGravGunDrop( HP )
@@ -1732,7 +1733,7 @@ function SWEP:SecondaryAttack()
 	
 	local trace = DoPlayerOrNPCEyeTrace(self, self.Owner)
 	local tracetgt = trace.Entity
-	local tgt = NULL
+	local tgt = nil
 	
 	if (!ConVarExists("scgg_cone") or GetConVar("scgg_cone"):GetBool()) and !self:PickupCheck(tracetgt) then--and !IsValid(HP) then
 		tgt = self:GetConeEnt(trace)

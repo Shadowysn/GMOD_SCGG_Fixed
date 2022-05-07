@@ -41,7 +41,7 @@ local function EnableGrabFunction(name, ent)
 end
 
 for _,ent in pairs(GetEnts) do
-	if IsValid(ent) and ent:GetClass() == "weapon_physcannon"  and !ent.SCGG_IsUpgrading then
+	if IsValid(ent) and ent:GetClass() == "weapon_physcannon" and !IsValid(ent:GetOwner()) and !ent.SCGG_IsUpgrading then
 		ent.SCGG_IsUpgrading = true
 		if ConVarExists("scgg_enabled") and 
 		(!ConVarExists("scgg_allow_enablecvar_modify") or GetConVar("scgg_allow_enablecvar_modify"):GetInt() > 0)
