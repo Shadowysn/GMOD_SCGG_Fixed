@@ -90,7 +90,7 @@ for _,ent in pairs(GetEnts) do
 		core:SetKeyValue( "scale", 1.25 )
 		core:Spawn()
 		core:Fire( "SetParentAttachment", "core", 0 )
-		core:Fire( "StartCharge","0.05",0.01 )
+		core:Fire( "StartCharge","1.00",0.01 )
 		
 		--[[local core2 = ents.Create("env_citadel_energy_core")
 		core2:SetPos( coreattachment.Pos )

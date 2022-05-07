@@ -68,11 +68,14 @@ local function DoParticleEffects(entity)
 				
 				if numParticles <= 0 then return end
 				
-				local numHitBoxSets = entity:GetHitboxSetCount()
-				for hboxset=0, numHitBoxSets - 1 do
-					local numHitBoxes = entity:GetHitBoxCount( hboxset )
+				-- Orange particles supposed to surround the gun
+				local numHitBoxSets = entity:GetHitboxSetCount() --print("numHitBoxSets: "..numHitBoxSets)
+				for hboxset = 0, numHitBoxSets - 1 do
+					--print("hboxset: "..hboxset)
+					local numHitBoxes = entity:GetHitBoxCount( hboxset ) --print("numHitBoxes: "..numHitBoxes)
 					
-					for hitbox=0, numHitBoxes - 1 do
+					for hitbox = 0, numHitBoxes - 1 do
+						--print("hitbox: "..hitbox)
 						--local bone = entity:GetHitBoxBone(hitbox, hboxset )
 			
 						--print( "Hit box set " .. hboxset .. ", hitbox " .. hitbox .. " is attached to bone " .. entity:GetBoneName(bone) )
@@ -196,6 +199,7 @@ net.Receive("SCGG_Charging_Particles", function()
 		--end)
 	end
 end)
+-- lua_run for _,ent in ipairs(ents.GetAll()) do if ent:GetClass() == "weapon_physcannon" then net.Start("SCGG_Charging_Particles") net.WriteEntity(ent) net.Broadcast() end end
 
 --[[hook.Add("Think", "yay_temp_temp_temp", function() 
 	for _,ent in pairs(ents.GetAll()) do
@@ -327,9 +331,10 @@ local function HL2Options(panel) -- HL2 Options for the menu.
 	panel:ControlHelp("0 = Players will not be directly killed")
 	panel:ControlHelp("1 = Players can be directly killed")
 	
-	panel:AddControl("Toggle",{Label = "Weapon Vaporization",min = 0,max = 1,Command = "scgg_weapon_vaporize"})--7
+	panel:AddControl("Slider",{Label = "Weapon Vaporization",min = 0,max = 2,Command = "scgg_weapon_vaporize"})--7
 	panel:ControlHelp("0 = Disabled")
-	panel:ControlHelp("1 = Dropped weapons will be vaporized map-wide")
+	panel:ControlHelp("1 = Dropped weapons vaporized map-wide every tick")
+	panel:ControlHelp("2 = Dropped weapons vaporized map-wide every time an NPC or Player dies")
 	
 	panel:AddControl("Toggle",{Label = "Extra Primary Attack Behavior",min = 0,max = 1,Command = "scgg_primary_extra"})--8
 	--panel:ControlHelp("")
@@ -348,7 +353,7 @@ local function HL2Options(panel) -- HL2 Options for the menu.
 	panel:AddControl("Slider",{Label = "Armor Drain",min = 0,max = 2,Command = "scgg_keep_armor"})--11
 	panel:ControlHelp("0 = All armor will be depleted on weapon disable")
 	panel:ControlHelp("1 = Armor will be depleted to 100% on weapon disable")
-	panel:ControlHelp("1 = Armor will not deplete")
+	panel:ControlHelp("2 = Armor will not deplete")
 	
 	panel:AddControl("Slider",{Label = "Claw Behavior",min = 0,max = 2,Command = "scgg_claw_mode"})--12
 	panel:ControlHelp("0 = Claws always closed")

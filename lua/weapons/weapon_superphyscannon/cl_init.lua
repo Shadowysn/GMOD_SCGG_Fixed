@@ -138,13 +138,23 @@ function SWEP:AdjustClaws()
 		if self.PoseParam >= 1 then
 			self:PlayClawSound(true) -- Should play open sound
 		end
-		local result = CalculateFrameAffectedNum(0.0025)
+		local result = nil
+		if game.SinglePlayer() then
+			result = CalculateFrameAffectedNum(0.0025)
+		else
+			result = CalculateFrameAffectedNum(0.02)
+		end
 		self.PoseParam = self.PoseParam-result
 	elseif self.PoseParamDesired > self.PoseParam then
 		if self.PoseParam <= 0 then
 			self:PlayClawSound(false) -- Should play close sound
 		end
-		local result = CalculateFrameAffectedNum(0.05)
+		local result = nil
+		if game.SinglePlayer() then
+			result = CalculateFrameAffectedNum(0.05)
+		else
+			result = CalculateFrameAffectedNum(0.1)
+		end
 		self.PoseParam = self.PoseParam+result
 	end
 	
@@ -277,7 +287,7 @@ function SWEP:Think()
 		local tracetgt = trace.Entity
 		local tgt = nil
 		
-		if (!ConVarExists("scgg_cone") or GetConVar("scgg_cone"):GetBool()) and !self:PickupCheck(tracetgt) then--and (!IsValid(self:GetHP())) then
+		if (!ConVarExists("scgg_cone") or GetConVar("scgg_cone"):GetBool()) and !self:PickupCheck(tracetgt) and (!IsValid(self:GetTP())) then
 			tgt = self:GetConeEnt(trace)
 		else
 			tgt = tracetgt

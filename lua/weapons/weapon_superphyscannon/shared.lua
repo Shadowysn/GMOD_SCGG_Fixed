@@ -238,19 +238,22 @@ local function FadeScreen(ply)
 end
 
 function SWEP:GetHP()
-	--return self:GetNWEntity("SCGG_HP", nil)
-	return self.HP
+	return self:GetNWEntity("SCGG_HP", nil)
+	--if !SERVER then return nil end
+	--return self.HP
 end
 function SWEP:SetHP(entity)
-	--self:SetNWEntity("SCGG_HP", entity)
-	self.HP = entity
-	--print(self:GetHP())
+	self:SetNWEntity("SCGG_HP", entity)
+	--if !SERVER then return end
+	--self.HP = entity
 end
 function SWEP:GetTP()
 	return self:GetNWEntity("SCGG_TP", nil)
+	--if !SERVER then return nil end
 end
 function SWEP:SetTP(entity)
 	self:SetNWEntity("SCGG_TP", entity)
+	--if !SERVER then return end
 end
 
 local function InitChangeableVars(self)
@@ -427,42 +430,44 @@ local function DirectCheck(self, tgt) -- Check if can be punted/grabbed, but wit
 	(
 		(
 			(
-				self:AllowedClass(tgt)
-				and
-				tgt:GetMoveType() == MOVETYPE_VPHYSICS
-			)
-			and
-			(
-				IsValid(tgt:GetPhysicsObject())
-				and
-				tgt:GetPhysicsObject():GetMass() < (self:GetMaxMass())
-				and
-				IsMotionEnabledOrGrabbableFlag(tgt)
-				or
-				CLIENT -- Physics objects don't exist on client, so we don't check for them else it just doesn't work
-			)
-		)
-		or
-		(
-			(
-				--(
-					tgt:IsNPC()
-					or
-					tgt:IsNextBot()
-				--)
-				and
 				(
-					(!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool())
-					or
-					!self:FriendlyNPC( tgt )
+					self:AllowedClass(tgt)
+					and
+					tgt:GetMoveType() == MOVETYPE_VPHYSICS
 				)
 				and
-				tgt:Health() <= self:GetMaxTargetHealth()
+				(
+					IsValid(tgt:GetPhysicsObject())
+					and
+					tgt:GetPhysicsObject():GetMass() < (self:GetMaxMass())
+					and
+					IsMotionEnabledOrGrabbableFlag(tgt)
+					or
+					CLIENT -- Physics objects don't exist on client, so we don't check for them else it just doesn't work
+				)
 			)
 			or
-			tgt:IsPlayer()
-			or
-			tgt:IsRagdoll()
+			(
+				(
+					(
+						tgt:IsNPC()
+						or
+						tgt:IsNextBot()
+					)
+					and
+					(
+						(!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool())
+						or
+						!self:FriendlyNPC( tgt )
+					)
+					and
+					tgt:Health() <= self:GetMaxTargetHealth()
+				)
+				or
+				tgt:IsPlayer()
+				or
+				tgt:IsRagdoll()
+			)
 		)
 		and
 		!self:NotAllowedClass(tgt)
@@ -481,10 +486,8 @@ local function PuntCheck(self, tgt) -- Punting check, use this as if it were som
 		DistancePunt_Test = self:GetMaxPuntRange()+10
 	end
 	
-	if (DirectCheck(self, tgt) or 
-	(IsValid(tgt) and tgt:Health() > 0 and 
-	((!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC(tgt)) ) ) and -- Allow punting on NPCS/Players with high HP
-	( DistancePunt_Test < self:GetMaxPuntRange() )
+	if (DirectCheck(self, tgt) and 
+	DistancePunt_Test < self:GetMaxPuntRange() )
 	--and !self.Owner:KeyDown(IN_ATTACK) -- Don't know why I commented this out, but I must've did it for a reason. Glitch, maybe?
 	then
 		return true
@@ -500,7 +503,7 @@ function SWEP:PickupCheck(tgt) -- Pickup check. Like beforehand, use this as if 
 		Distance_Test = self:GetMaxPickupRange()+10
 	end
 	
-	if DirectCheck(self, tgt) and
+	if DirectCheck(self, tgt) and 
 	( Distance_Test < self:GetMaxPickupRange() )
 	then
 		return true
@@ -1102,6 +1105,8 @@ function SWEP:FriendlyNPC( npc )
 		else
 			return false
 		end
+	else
+		return false
 	end
 end
 
@@ -1153,7 +1158,7 @@ end
 	end
 end--]]
 
-function SWEP:HookPhysicsHurting(entity)
+local function HookPhysicsHurting(self, entity)
 	if !IsValid(entity) then return end
 	local class = entity:GetClass()
 	if class != "npc_manhack" then return end
@@ -1186,6 +1191,171 @@ function SWEP:HookPhysicsHurting(entity)
 			entity:RemoveCallback("PhysicsCollide", callback)
 		end
 	end)
+end
+
+local function AttackDoDamage(self, tgt, traceHitPos, isPunt)
+	if !SERVER then return end
+	
+	if isPunt == nil then isPunt = true end
+	
+	local dmginfo = DamageInfo()
+	dmginfo:SetDamageForce( self.Owner:GetShootPos() )
+	dmginfo:SetDamageType( DMG_PHYSGUN )
+	dmginfo:SetAttacker( self.Owner )
+	dmginfo:SetInflictor( self.Weapon )
+	dmginfo:SetReportedPosition( self.Owner:GetShootPos() )
+	if isPunt then
+		dmginfo:SetDamage( self:GetMaxTargetHealth() )
+		dmginfo:SetDamagePosition( traceHitPos )
+	else
+		dmginfo:SetDamage( tgt:Health() )
+	end
+	
+	if tgt:IsPlayer() then
+		tgt:TakeDamageInfo( dmginfo )
+	elseif tgt:IsNPC() or tgt:IsNextBot() then
+		if tgt:GetShouldServerRagdoll() != true then
+			tgt:SetShouldServerRagdoll( true )
+		end
+		
+		tgt:TakeDamageInfo( dmginfo )
+	end
+end
+
+local function AttackAffectTarget(self, tgt, isPunt)
+	if !SERVER then return nil end
+	
+	local ragdoll = nil
+	
+	if isPunt == nil then isPunt = true end
+	
+	for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
+		if rag:IsRagdoll() and rag:GetCreationTime() == CurTime() then
+			ragdoll = rag
+			break
+		end
+	end
+	
+	local NewRagdollFormed = false
+	if !IsValid(ragdoll) 
+	and tgt:GetClass() != "npc_antlion_worker" and 
+	(tgt:GetClass() != "npc_antlion" or tgt:GetModel() != "models/antlion_worker.mdl")
+	then
+		local newragdoll = ents.Create( "prop_ragdoll" )
+		newragdoll:SetPos( tgt:GetPos())
+		newragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
+		newragdoll:SetModel( tgt:GetModel() )
+		if tgt:GetSkin() then
+			newragdoll:SetSkin( tgt:GetSkin() )
+		end
+		newragdoll:SetColor( tgt:GetColor() )
+		for k,v in pairs(tgt:GetBodyGroups()) do
+			newragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
+		end
+		newragdoll:SetMaterial( tgt:GetMaterial() )
+		if !isPunt then
+			newragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+		end
+		newragdoll:SetKeyValue("spawnflags",8192)
+		newragdoll:Spawn()
+		ragdoll = newragdoll
+		NewRagdollFormed = true
+	elseif !isPunt and !IsValid(ragdoll) then
+		-- This makes the SCGG grab a potential gib nearby
+		for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
+			if (rag:IsRagdoll() or rag:GetClass() == "prop_physics") and rag:GetCreationTime() == CurTime() then
+				ragdoll = rag
+				break
+			end
+		end
+	end
+	
+	-- Just in case the NPC is scripted like VJ Base
+	if IsValid(tgt:GetActiveWeapon()) then
+		local wep = tgt:GetActiveWeapon()
+		local wepclass = wep:GetClass()
+		
+		if tgt:IsNPC() then
+			local vaporCvar = false
+			if ConVarExists("scgg_weapon_vaporize") then
+				vaporCvar = GetConVar("scgg_weapon_vaporize"):GetBool()
+			end
+			if !vaporCvar then
+				local weaponmodel = ents.Create( wepclass )
+				if IsValid(weaponmodel) then
+					weaponmodel:SetPos( tgt:GetShootPos() )
+					weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
+					weaponmodel:SetSkin( wep:GetSkin() )
+					weaponmodel:SetColor( wep:GetColor() )
+					weaponmodel:SetKeyValue("spawnflags","2")
+					weaponmodel:Spawn()
+					weaponmodel:Fire("Addoutput","spawnflags 0",1)
+				end
+			elseif vaporCvar then
+				if IsValid(weaponmodel) then
+					local weaponmodel = ents.Create( "prop_physics_override" )
+					weaponmodel:SetPos( tgt:GetShootPos() )
+					weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
+					weaponmodel:SetModel( wep:GetModel() )
+					weaponmodel:SetSkin( wep:GetSkin() )
+					weaponmodel:SetColor( wep:GetColor() )
+					weaponmodel:SetCollisionGroup( COLLISION_GROUP_WEAPON )
+					weaponmodel:Spawn()
+					DissolveEntity(weaponmodel)
+				end
+			end
+		end
+	end
+	
+	if self.Owner:IsPlayer() and NewRagdollFormed == true and IsValid(ragdoll) then
+		cleanup.Add(self.Owner, "props", ragdoll)
+		undo.Create("Ragdoll")
+		undo.AddEntity(ragdoll)
+		undo.SetPlayer(self.Owner)
+		undo.Finish()
+	end
+	
+	if tgt:IsPlayer() then
+		if IsValid(tgt:GetRagdollEntity()) and tgt:GetRagdollEntity() != ragdoll then
+			tgt:GetRagdollEntity():Remove()
+			tgt:SpectateEntity(ragdoll)
+			tgt:Spectate(OBS_MODE_CHASE)
+		end
+		net.Start("SCGG_Ragdoll_GetPlayerColor")
+		net.WriteInt(ragdoll:EntIndex(),32)
+		net.WriteVector(tgt:GetPlayerColor())
+		net.Send(player.GetAll())
+	elseif tgt:IsNPC() or tgt:IsNextBot() then
+		tgt:Fire("Kill","",0)
+	end
+	
+	if (isPunt or NewRagdollFormed == true) and IsValid(ragdoll) then -- if is punting or new ragdoll is formed for non-punting
+		for i = 1, ragdoll:GetPhysicsObjectCount() do
+			local bone = ragdoll:GetPhysicsObjectNum(i)
+			
+			if bone and IsValid(bone) then
+				if NewRagdollFormed == true then -- Set positions for any new formed ragdolls. Found ragdolls shouldn't need this.
+					local bonepos, boneang = tgt:GetBonePosition(ragdoll:TranslatePhysBoneToBone(i))
+					
+					bone:SetPos(bonepos)
+					bone:SetAngles(boneang)
+				end
+				
+				if isPunt then -- Throw force only for punting
+					timer.Simple(0.01, function()
+						if IsValid(self) and IsValid(self.Owner) and IsValid(bone) then
+							if !styleCvar then --Ragdoll Thrown
+								bone:AddVelocity(self.Owner:GetAimVector()*(13000/8))--/(ragdoll:GetPhysicsObject():GetMass()/200)) 
+							else
+								bone:AddVelocity(self.Owner:GetAimVector()*(bone:GetMass()*self.PuntMultiply)) 
+							end
+						end
+					end)
+				end
+			end
+		end
+	end
+	return ragdoll
 end
 
 function SWEP:PrimaryAttack()
@@ -1267,15 +1437,50 @@ function SWEP:PrimaryAttack()
 		zapCvar = GetConVar("scgg_zap"):GetBool()
 	end
 	
-	if (tgt:IsNPC() or tgt:IsNextBot()) and !self:AllowedClass(tgt) and !self:NotAllowedClass(tgt) or tgt:IsPlayer() then
-		local ragdoll = nil
-		if (SERVER) then
+	if SERVER then
+		if ((tgt:IsNPC() or tgt:IsNextBot()) and !self:AllowedClass(tgt) and !self:NotAllowedClass(tgt) or tgt:IsPlayer()) then
 			--if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
 			--if (tgt:IsPlayer() and server_settings.Int( "sbox_plpldamage" ) == 1) then
 				--self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
 				--return
 			--end
 			
+			AttackDoDamage(self, tgt, trace.HitPos, true)
+			
+			--if tgt:GetClass() == "npc_antlion_worker" then return end
+			if tgt:Health() > 0 then
+				tgt:SetVelocity(self.Owner:GetAimVector() * Vector( 2500, 2500, 0 ))
+				return 
+			end
+			
+			local ragdoll = AttackAffectTarget(self, tgt, true)
+			
+			if zapCvar and IsValid(ragdoll) then
+				ragdoll:SCGG_RagdollZapper()
+			end
+			if IsValid(ragdoll) then
+				ragdoll:SCGG_RagdollCollideTimer()
+		
+				ragdoll:SetPhysicsAttacker(self.Owner, 10)
+				ragdoll:SetCollisionGroup( self.HPCollideG )
+		
+				--tgt:DropWeapon( tgt:GetActiveWeapon() )
+				--if tgt:HasWeapon()
+				ragdoll:SetMaterial( tgt:GetMaterial() )
+		
+				ragdoll:Fire("FadeAndRemove","",120)
+			end
+			
+			if self.Owner:IsPlayer() then
+				self.Owner:AddFrags(1)
+			end
+			
+			if zapCvar and IsValid(ragdoll) then
+				ragdoll:Fire("StartRagdollBoogie","",0)
+			end
+			
+			--self:DoSparks()
+		elseif tgt:GetMoveType() != MOVETYPE_VPHYSICS and tgt:Health() > 0 then
 			local dmginfo = DamageInfo()
 			dmginfo:SetDamage( self:GetMaxTargetHealth() )
 			dmginfo:SetDamageForce( self.Owner:GetShootPos() )
@@ -1284,220 +1489,8 @@ function SWEP:PrimaryAttack()
 			dmginfo:SetAttacker( self.Owner )
 			dmginfo:SetInflictor( self.Weapon )
 			dmginfo:SetReportedPosition( self.Owner:GetShootPos() )
-			
-			--if ( !GetConVar("scgg_style"):GetBool() and ( (tgt:IsNPC() or tgt:IsNextBot()) and tgt:Health() > self:GetMaxTargetHealth() or tgt:IsPlayer() and tgt:Health()+tgt:Armor() > self:GetMaxTargetHealth() ) ) or ( !util.IsValidRagdoll(tgt:GetModel()) ) then
-			--	tgt:TakeDamageInfo( dmginfo )
-			--else
-				if tgt:IsPlayer() then
-					--[[net.Start( "PlayerKilledByPlayer" )
-					net.WriteEntity( tgt )
-					net.WriteString( "weapon_superphyscannon" )
-					net.WriteEntity( self.Owner )
-					net.Broadcast()--]]
-					tgt:TakeDamageInfo( dmginfo )
-				elseif tgt:IsNPC() or tgt:IsNextBot() then
-					if tgt:GetShouldServerRagdoll() != true then
-						tgt:SetShouldServerRagdoll( true )
-					end
-					
-					tgt:TakeDamageInfo( dmginfo )
-				end
-				
-				for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-					if rag:IsRagdoll() and rag:GetCreationTime() == CurTime() then
-						--rag:Remove()
-						ragdoll = rag
-						break
-					end
-				end
-				
-				--if tgt:GetClass() == "npc_antlion_worker" then return end
-				if tgt:Health() > 0 then
-					tgt:SetVelocity(self.Owner:GetAimVector() * Vector( 2500, 2500, 0 ))
-					return 
-				end
-				
-				if !IsValid(ragdoll)
-				and tgt:GetClass() != "npc_antlion_worker" and (tgt:GetClass() != "npc_antlion" or tgt:GetModel() != "models/antlion_worker.mdl")
-				then
-					local newragdoll = ents.Create( "prop_ragdoll" )
-					newragdoll:SetPos( tgt:GetPos())
-					newragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
-					newragdoll:SetModel( tgt:GetModel() )
-					if tgt:GetSkin() then
-						newragdoll:SetSkin( tgt:GetSkin() )
-					end
-					newragdoll:SetColor( tgt:GetColor() )
-					for k,v in pairs(tgt:GetBodyGroups()) do
-						newragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
-					end
-					newragdoll:SetMaterial( tgt:GetMaterial() )
-					newragdoll:SetKeyValue("spawnflags",8192)
-					newragdoll:Spawn()
-					ragdoll = newragdoll
-					self.SCGGNewRagdollFormed = true
-				end
-				
-				-- Just in case the NPC is scripted like VJ Base
-				if IsValid(tgt:GetActiveWeapon()) then
-					local wep = tgt:GetActiveWeapon()
-					--local model = wep:GetModel()
-					local wepclass = wep:GetClass()
-					
-					if tgt:IsNPC() then
-						local vaporCvar = false
-						if ConVarExists("scgg_weapon_vaporize") then
-							vaporCvar = GetConVar("scgg_weapon_vaporize"):GetBool()
-						end
-						if !vaporCvar then
-							local weaponmodel = ents.Create( wepclass )
-							if IsValid(weaponmodel) then
-								weaponmodel:SetPos( tgt:GetShootPos() )
-								weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-								weaponmodel:SetSkin( wep:GetSkin() )
-								weaponmodel:SetColor( wep:GetColor() )
-								weaponmodel:SetKeyValue("spawnflags","2")
-								weaponmodel:Spawn()
-								weaponmodel:Fire("Addoutput","spawnflags 0",1)
-							end
-						elseif vaporCvar then
-							if IsValid(weaponmodel) then
-								local weaponmodel = ents.Create( "prop_physics_override" )
-								weaponmodel:SetPos( tgt:GetShootPos() )
-								weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-								weaponmodel:SetModel( wep:GetModel() )
-								weaponmodel:SetSkin( wep:GetSkin() )
-								weaponmodel:SetColor( wep:GetColor() )
-								weaponmodel:SetCollisionGroup( COLLISION_GROUP_WEAPON )
-								weaponmodel:Spawn()
-								DissolveEntity(weaponmodel)
-							end
-						end
-					end
-				end
-				
-				if zapCvar and IsValid(ragdoll) then
-					ragdoll:SCGG_RagdollZapper()
-				end
-				if IsValid(ragdoll) then
-					ragdoll:SCGG_RagdollCollideTimer()
-	
-					ragdoll:SetPhysicsAttacker(self.Owner, 10)
-					ragdoll:SetCollisionGroup( self.HPCollideG )
-	
-					--tgt:DropWeapon( tgt:GetActiveWeapon() )
-					--if tgt:HasWeapon()
-					ragdoll:SetMaterial( tgt:GetMaterial() )
-	
-					--if server_settings.Int( "ai_keepragdolls" ) == 0 then
-						--ragdoll.Entity:Fire("FadeAndRemove","",0.3)
-					--else
-						ragdoll:Fire("FadeAndRemove","",120)
-					--end
-					if tgt:IsPlayer() then
-						net.Start("SCGG_Ragdoll_GetPlayerColor")
-						net.WriteInt(ragdoll:EntIndex(),32)
-						net.WriteVector(tgt:GetPlayerColor())
-						net.Send(player.GetAll())
-					end
-				end
-				
-				if self.Owner:IsPlayer() and self.SCGGNewRagdollFormed == true and IsValid(ragdoll) then
-					cleanup.Add (self.Owner, "props", ragdoll)
-					undo.Create ("Ragdoll")
-					undo.AddEntity (ragdoll)
-					undo.SetPlayer (self.Owner)
-					undo.Finish()
-					
-					--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and IsValid(tgt) then
-					net.Start( "PlayerKilledNPC" )
-					net.WriteString( tgt:GetClass() )
-					net.WriteString( self.Weapon:GetClass() )
-					net.WriteEntity( self.Owner )
-					net.Broadcast()
-					end--]]
-				end
-				
-				if tgt:IsPlayer() then
-					--tgt:KillSilent()
-					--ragdoll:SetPlayerColor( tgt:GetPlayerColor() )
-					--tgt:AddDeaths(1)
-					/*local dmg = DamageInfo()
-					dmg:SetDamage( tgt:Health() )
-					dmg:SetDamageForce( self.Owner:GetShootPos() )
-					dmg:SetDamagePosition( trace.HitPos )
-					dmg:SetDamageType( DMG_PHYSGUN )
-					dmg:SetAttacker( self.Owner )
-					dmg:SetInflictor( self.Weapon )
-					dmg:SetReportedPosition( self.Owner:GetShootPos() )
-					tgt:TakeDamageInfo( dmg )*/
-					if IsValid(tgt:GetRagdollEntity()) and tgt:GetRagdollEntity() != ragdoll then
-						tgt:GetRagdollEntity():Remove()
-						tgt:SpectateEntity(ragdoll)
-						tgt:Spectate(OBS_MODE_CHASE)
-					end
-	
-				elseif tgt:IsNPC() or tgt:IsNextBot() then
-					--if tgt:Health() >= 1 then
-					tgt:Fire("Kill","",0)
-					--net.Start( "PlayerKilledNPC" )
-					--net.WriteString( tgt:GetClass() )
-					--net.WriteString( "weapon_superphyscannon" )
-					--net.WriteEntity( self.Owner )
-					--net.Broadcast()
-					--end
-				end
-				
-				if self.Owner:IsPlayer() then
-					self.Owner:AddFrags(1)
-				end
-				
-				if zapCvar and IsValid(ragdoll) then
-					ragdoll:Fire("StartRagdollBoogie","",0)
-				end
-				--ragdoll:Fire("SetBodygroup","15",0)
-				--timer.Remove( "SCGG_Ragdoll_Collision_Timer"..self:EntIndex() )
-				
-				--RagdollVisual(ragdoll, 1)
-				if IsValid(ragdoll) then
-					for i = 1, ragdoll:GetPhysicsObjectCount() do
-						local bone = ragdoll:GetPhysicsObjectNum(i)
-						
-						if bone and bone.IsValid and bone:IsValid() then
-							local bonepos, boneang = tgt:GetBonePosition(ragdoll:TranslatePhysBoneToBone(i))
-							
-							if self.SCGGNewRagdollFormed == true then
-								bone:SetPos(bonepos)
-								bone:SetAngles(boneang)
-							end
-							timer.Simple(0.01, function()
-								if IsValid(self) and IsValid(self.Owner) and IsValid(bone) then
-									if !styleCvar then --Ragdoll Thrown
-										bone:AddVelocity(self.Owner:GetAimVector()*(13000/8))--/(ragdoll:GetPhysicsObject():GetMass()/200)) 
-									else
-										bone:AddVelocity(self.Owner:GetAimVector()*(bone:GetMass()*self.PuntMultiply)) 
-									end
-								end
-							end)
-						end
-					end
-				end
-			--end
+			tgt:TakeDamageInfo( dmginfo )
 		end
-		
-		ragdoll = nil
-		self.SCGGNewRagdollFormed = nil
-		--self:DoSparks()
-	elseif tgt:GetMoveType() != MOVETYPE_VPHYSICS and tgt:Health() > 0 then
-		local dmginfo = DamageInfo()
-		dmginfo:SetDamage( self:GetMaxTargetHealth() )
-		dmginfo:SetDamageForce( self.Owner:GetShootPos() )
-		dmginfo:SetDamagePosition( trace.HitPos )
-		dmginfo:SetDamageType( DMG_PHYSGUN )
-		dmginfo:SetAttacker( self.Owner )
-		dmginfo:SetInflictor( self.Weapon )
-		dmginfo:SetReportedPosition( self.Owner:GetShootPos() )
-		tgt:TakeDamageInfo( dmginfo )
 	end
 	
 	if IsMotionEnabledOrGrabbableFlag(tgt) then
@@ -1541,7 +1534,7 @@ function SWEP:PrimaryAttack()
 			--tgt:Fire("physdamagescale","99999",0)
 		end
 		
-		self:HookPhysicsHurting(tgt)
+		HookPhysicsHurting(self, tgt)
 		--if tgt:GetClass() == "npc_manhack" then
 			tgt:SetSaveValue("m_flEngineStallTime", 2.0)
 		--end
@@ -1580,13 +1573,9 @@ function SWEP:PrimaryAttack()
 			end
 		end
 		
-		--timer.Remove( "SCGG_Ragdoll_Collision_Timer"..self:EntIndex() )
-		tgt:SetCollisionGroup( self.HPCollideG )
-		--[[timer.Create( "SCGG_Ragdoll_Collision_Timer"..self:EntIndex(), 2, 1, function() 
-			if IsValid(tgt) then
-			tgt:SetCollisionGroup(COLLISION_GROUP_WEAPON)
-			end
-		end )--]]
+		if SERVER then
+			tgt:SetCollisionGroup( self.HPCollideG )
+		end
 	end
 	
 	if self:AllowedClass(tgt) and !tgt:IsRagdoll() and SERVER then
@@ -1608,7 +1597,7 @@ function SWEP:DropAndShoot()
 	
 	local HP = self:GetHP()
 	if !IsValid(HP) then self:HPrem() return end
-	HP:Fire("EnablePhyscannonPickup","",1)
+	if SERVER then HP:Fire("EnablePhyscannonPickup","",1) end
 	
 	local HPHealth = HP:Health()
 	if HPHealth > 0 and self.HPHealth > 0 then
@@ -1621,16 +1610,18 @@ function SWEP:DropAndShoot()
 	else
 		HP:SetCollisionGroup( self.HPCollideG )
 	end
-	HP:SetPhysicsAttacker(self.Owner, 10)
+	if SERVER then
+		HP:SetPhysicsAttacker(self.Owner, 10)
+		--HP:SetNWBool("launched_by_scgg", true)
+		self.Owner:SimulateGravGunDrop( HP )
+	end
 	
-	--HP:SetNWBool("launched_by_scgg", true)
-	self.Owner:SimulateGravGunDrop( HP )
 	if (HP:GetClass() == "prop_combine_ball") then
 		HP:SetSaveValue("m_bLaunched", true)
 	end
 	
 	FadeScreen(self.Owner)
-	self:HookPhysicsHurting(HP)
+	HookPhysicsHurting(self, HP)
 	--if HP:GetClass() == "npc_manhack" then
 		HP:SetSaveValue("m_flEngineStallTime", 2.0)
 	--end
@@ -1660,7 +1651,7 @@ function SWEP:DropAndShoot()
 		dmginfo:SetAttacker( self:GetOwner() )
 		dmginfo:SetInflictor( self )
 		
-		if zapCvar then
+		if SERVER and zapCvar then
 			HP:Fire("StartRagdollBoogie","",0)
 		end
 		--RagdollVisual(HP, 1)
@@ -1714,7 +1705,7 @@ function SWEP:DropAndShoot()
 			phys:AddAngleVelocity(phys:GetAngleVelocity()*-1)
 		end)
 	end
-	HP:Fire("physdamagescale","999",0)
+	--HP:Fire("physdamagescale","999",0)
 	
 	--[[timer.Simple( 0.04, function()
 		self:SetHP(nil)
@@ -1732,7 +1723,7 @@ end
 function SWEP:SecondaryAttack()
 	if self.Fading == true then return end
 	
-	if IsValid(self:GetHP()) then
+	if IsValid(self:GetHP()) and self.Owner:IsPlayer() and self.Owner:KeyPressed(IN_ATTACK2) then
 		self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
 		self.Owner:SetAnimation( PLAYER_ATTACK1 )
 		self:Drop()
@@ -1745,17 +1736,7 @@ function SWEP:SecondaryAttack()
 	
 	if (!ConVarExists("scgg_cone") or GetConVar("scgg_cone"):GetBool()) and !self:PickupCheck(tracetgt) then--and !IsValid(HP) then
 		tgt = self:GetConeEnt(trace)
-		--print(tgt)
-	--[[if !IsValid(tgt) then return end
-	local utiltrace = util.TraceLine( { 
-		start = trace.StartPos,
-		endpos = tgt:GetPos(),
-		filter = {tgt}
-	} )
-	if (utiltrace.FractionLeftSolid > 0) then
-		return
-	end--]]
-	else--if !GetConVar("scgg_cone"):GetBool() then
+	else
 		tgt = tracetgt
 	end
 	
@@ -1819,196 +1800,17 @@ function SWEP:SecondaryAttack()
 	
 	if SERVER and !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) and Dist < self:GetMaxPickupRange() then
 		if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
-		--if tgt:IsPlayer() and server_settings.Int( "sbox_plpldamage" ) == 1 then
-			--self.Weapon:EmitSound("Weapon_PhysCannon.TooHeavy")
-			--return
-		--end
 		
 		if tgt:IsNPC() or tgt:IsNextBot() and (
 		(!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC(tgt) ) 
 		or tgt:IsPlayer() then
-			if tgt:IsPlayer() then
-				local dmg = DamageInfo()
-				dmg:SetDamage( tgt:Health() )
-				dmg:SetDamageForce( self.Owner:GetShootPos() )
-				dmg:SetDamageType( DMG_PHYSGUN )
-				dmg:SetAttacker( self.Owner )
-				dmg:SetInflictor( self.Weapon )
-				dmg:SetReportedPosition( self.Owner:GetShootPos() )
-				tgt:TakeDamageInfo( dmg )
-				--[[net.Start( "PlayerKilledByPlayer" )
-				net.WriteEntity( tgt )
-				net.WriteString( "weapon_superphyscannon" )
-				net.WriteEntity( self.Owner )
-				net.Broadcast()--]]
-			elseif tgt:IsNPC() or tgt:IsNextBot() then
-				if tgt:GetShouldServerRagdoll() != true then
-					tgt:SetShouldServerRagdoll( true )
-				end
-				--if tgt:GetClass() != "npc_antlion_worker" and (tgt:GetClass() != "npc_antlion" or 
-				--tgt:GetModel()!="models/antlion_worker.mdl") then
-				local dmg = DamageInfo()
-				dmg:SetDamage( tgt:Health() )
-				dmg:SetDamageForce( self.Owner:GetShootPos() )
-				dmg:SetDamageType( DMG_PHYSGUN )
-				dmg:SetAttacker( self.Owner )
-				dmg:SetInflictor( self.Weapon )
-				dmg:SetReportedPosition( self.Owner:GetShootPos() )
-				tgt:TakeDamageInfo( dmg )
-				--end
-				
-				for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-					if rag:IsRagdoll() and rag:GetModel() == tgt:GetModel() and rag:GetCreationTime() == CurTime() then
-						--rag:Remove()
-						ragdoll = rag
-						break
-					end
-				end
-			end
+			AttackDoDamage(self, tgt, trace.HitPos, false)
 			
 			if tgt:Health() >= 1 then return end
 			
-			if !IsValid(ragdoll) 
-			and tgt:GetClass() != "npc_antlion_worker" and (tgt:GetClass() != "npc_antlion" or tgt:GetModel() != "models/antlion_worker.mdl")
-			then
-				local newragdoll = ents.Create( "prop_ragdoll" )
-				newragdoll:SetPos( tgt:GetPos())
-				newragdoll:SetAngles(tgt:GetAngles()-Angle(tgt:GetAngles().p,0,0))
-				newragdoll:SetModel( tgt:GetModel() )
-				if tgt:GetSkin() then
-					newragdoll:SetSkin( tgt:GetSkin() )
-				end
-				newragdoll:SetColor( tgt:GetColor() )
-				for k,v in pairs(tgt:GetBodyGroups()) do
-					newragdoll:SetBodygroup(v.id,tgt:GetBodygroup(v.id))
-				end
-				newragdoll:SetMaterial( tgt:GetMaterial() )
-				newragdoll:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-				newragdoll:SetKeyValue("spawnflags",8192)
-				newragdoll:Spawn()
-				ragdoll = newragdoll
-				self.SCGGNewRagdollFormed = true
-			elseif !IsValid(ragdoll) then
-				-- This makes the SCGG grab a part of the 
-				for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-					if (rag:IsRagdoll() or rag:GetClass() == "prop_physics") and rag:GetCreationTime() == CurTime() then
-						ragdoll = rag
-						break
-					end
-				end
-			end
+			local ragdoll = AttackAffectTarget(self, tgt, false)
 			
-			if IsValid(tgt:GetActiveWeapon()) then
-				local wep = tgt:GetActiveWeapon()
-				--local model = wep:GetModel()
-				local wepclass = wep:GetClass()
-				
-				if tgt:IsNPC() then
-					local vaporCvar = false
-					if ConVarExists("scgg_weapon_vaporize") then
-						vaporCvar = GetConVar("scgg_weapon_vaporize"):GetBool()
-					end
-					if !vaporCvar then
-						local weaponmodel = ents.Create( wepclass )
-						weaponmodel:SetPos( tgt:GetShootPos() )
-						weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-						--if IsValid(model) then
-						--weaponmodel:SetModel( model )
-						--end
-						weaponmodel:SetSkin( wep:GetSkin() )
-						weaponmodel:SetColor( wep:GetColor() )
-						weaponmodel:SetKeyValue("spawnflags","2")
-						weaponmodel:Spawn()
-						weaponmodel:Fire("Addoutput","spawnflags 0",1)
-					elseif vaporCvar then
-						local weaponmodel = ents.Create( "prop_physics_override" )
-						weaponmodel:SetPos( tgt:GetShootPos() )
-						weaponmodel:SetAngles(wep:GetAngles()-Angle(wep:GetAngles().p,0,0))
-						weaponmodel:SetModel( wep:GetModel() )
-						weaponmodel:SetSkin( wep:GetSkin() )
-						weaponmodel:SetColor( wep:GetColor() )
-						weaponmodel:SetCollisionGroup( COLLISION_GROUP_WEAPON )
-						weaponmodel:Spawn()
-						DissolveEntity(weaponmodel)
-					end
-				end
-			end
-			
-			if self.Owner:IsPlayer() and self.SCGGNewRagdollFormed == true and IsValid(ragdoll) then
-				cleanup.Add(self.Owner, "props", ragdoll)
-				undo.Create("Ragdoll")
-				undo.AddEntity(ragdoll)
-				undo.SetPlayer(self.Owner)
-				undo.SetCustomUndoText("Undone Ragdoll")
-				undo.Finish()
-				
-				--[[if !tgt:IsPlayer() and tgt:Health() <= 0 and IsValid(tgt) then
-				net.Start( "PlayerKilledNPC" )
-				net.WriteString( tgt:GetClass() )
-				net.WriteString( self.Weapon:GetClass() )
-				net.WriteEntity( self.Owner )
-				net.Broadcast()
-				end--]]
-			end
-			
-			if tgt:IsPlayer() then
-				--tgt:KillSilent()
-				--ragdoll:SetColor( tgt:GetPlayerColor()  )
-				--tgt:AddDeaths(1)
-				--self.Owner:AddFrags(1)
-				/*local dmg = DamageInfo()
-				dmg:SetDamage( tgt:Health() )
-				dmg:SetDamageForce( self.Owner:GetShootPos() )
-				dmg:SetDamageType( DMG_PHYSGUN )
-				dmg:SetAttacker( self.Owner )
-				dmg:SetInflictor( self.Weapon )
-				dmg:SetReportedPosition( self.Owner:GetShootPos() )
-				tgt:TakeDamageInfo( dmg )*/
-				if IsValid(tgt:GetRagdollEntity()) and tgt:GetRagdollEntity() != ragdoll then
-					tgt:GetRagdollEntity():Remove()
-					tgt:SpectateEntity(ragdoll)
-					tgt:Spectate(OBS_MODE_CHASE)
-				end
-			elseif tgt:IsNPC() then
-				tgt:Fire("Kill","",0)
-			end
-			
-			--[[self:SetHP(ragdoll)
-			self.HP_PickedUp = true
-			
-			self.Weapon:SetNextSecondaryFire( CurTime() + 0.2 )
-			if GetConVar("scgg_style"):GetBool() then
-			self.Weapon:SetNextPrimaryFire( CurTime() + 0.1 ) end
-			self.Secondary.Automatic = false
-			
-			self.Weapon:SendWeaponAnim( ACT_VM_SECONDARYATTACK )
-			self.Owner:SetAnimation( PLAYER_ATTACK1 )--]]
 			DoPickup(ragdoll)
-			
-			if tgt:IsPlayer() then
-				net.Start("SCGG_Ragdoll_GetPlayerColor")
-				net.WriteInt(ragdoll:EntIndex(),32)
-				net.WriteVector(tgt:GetPlayerColor())
-				net.Send(player.GetAll())
-			end
-			
-			if self.SCGGNewRagdollFormed == true and IsValid(ragdoll) then
-				for i = 1, ragdoll:GetPhysicsObjectCount() do
-					local bone = ragdoll:GetPhysicsObjectNum(i)
-				
-					if bone and bone.IsValid and bone:IsValid() then
-						local bonepos, boneang = tgt:GetBonePosition(ragdoll:TranslatePhysBoneToBone(i))
-						
-						bone:SetPos(bonepos)
-						bone:SetAngles(boneang)
-					end
-				end
-			end
-			ragdoll = nil
-			self.SCGGNewRagdollFormed = nil
-			--[[timer.Simple( 0.01, function() 
-				self:Pickup() 
-			end)--]]
 		end
 	end
 	
@@ -2558,11 +2360,11 @@ function SWEP:HPrem()
 end
 
 function SWEP:TPrem()
-	if IsValid(self:GetTP()) then
+	if SERVER and IsValid(self:GetTP()) then
 		self:GetTP():Remove()
 	end
 	if IsValid(self.Const) and (self.Const:IsConstraint() or self.Const:GetClass() == "phys_ragdollconstraint") then
-		self.Const:Remove()
+		if SERVER then self.Const:Remove() end
 		self.Const = nil
 	end
 	self:SetTP(nil)

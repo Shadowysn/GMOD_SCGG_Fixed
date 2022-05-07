@@ -1,7 +1,9 @@
 AddCSLuaFile("client/cl_scgg_autorun.lua")
 AddCSLuaFile()
 
-include("server/sv_scgg_autorun.lua")
+if SERVER then
+	include("server/sv_scgg_autorun.lua")
+end
 
 list.Set("NPCUsableWeapons", "weapon_superphyscannon", {
 	title = "Super Gravity Gun",
