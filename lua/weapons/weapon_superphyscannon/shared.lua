@@ -163,6 +163,7 @@ local function ToggleHoldSound(swep, boolean)
 			if IsValid(child) and child:GetClass() == "ambient_generic" and child:GetInternalVariable( "message" ) == HoldSound then
 				child:Fire("StopSound")
 				child:Remove()
+				break
 			end
 		end
 	end
@@ -481,7 +482,8 @@ end
 local function PuntCheck(self, tgt) -- Punting check, use this as if it were something like IsValid() - PuntCheck(self, entity)
 	local DistancePunt_Test = 0
 	if IsValid(tgt) then
-		DistancePunt_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+		--DistancePunt_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+		DistancePunt_Test = ((tgt:GetPos()-self.Owner:GetPos()):LengthSqr()) / self:GetMaxPuntRange()
 	else
 		DistancePunt_Test = self:GetMaxPuntRange()+10
 	end
@@ -498,7 +500,8 @@ end
 function SWEP:PickupCheck(tgt) -- Pickup check. Like beforehand, use this as if it were something like IsValid() - self:PickupCheck(entity)
 	local Distance_Test = 0
 	if IsValid(tgt) then
-		Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+		--Distance_Test = (tgt:GetPos()-self.Owner:GetPos()):Length()
+		Distance_Test = ((tgt:GetPos()-self.Owner:GetPos()):LengthSqr()) / self:GetMaxPickupRange()
 	else
 		Distance_Test = self:GetMaxPickupRange()+10
 	end
@@ -538,7 +541,7 @@ function SWEP:GetConeEnt(trace) -- Punting check. Use like IsValid() but with a 
 					mask = MASK_SHOT_HULL
 				} )
 				if trace.Entity == ent then--and !trace.HitWorld and trace.HitNonWorld and !trace.StartSolid and !trace.AllSolid then
-					local temp_tbl = { {ent, (ent:GetPos()-self.Owner:EyePos()):Length()} }
+					local temp_tbl = { {ent, ((ent:GetPos()-self.Owner:EyePos()):LengthSqr()) / self:GetMaxPickupRange()} }
 					table.Add(cone_dist_table, temp_tbl)
 					--print(ent, "passed!")
 				else
@@ -717,7 +720,7 @@ if SERVER then
 		core:Spawn()
 		core:Fire( "SetParentAttachment", model_attachstr, 0 )
 		core:Fire( "AddOutput","scale 1.5",0 )
-		core:Fire( "StartCharge","0.1``",0.1 )
+		core:Fire( "StartDischarge","",0.1 )
 		core:Fire( "ClearParent","",0.89 )
 		core:Fire( "Stop","",0.9 )
 		core:Fire( "Kill","",1.9 )
@@ -792,9 +795,6 @@ function SWEP:Think() -- Think function for the weapon.
 		if IsValid(self.Core) then
 			self.Core:SetPos( self.Owner:GetShootPos() )
 		end
-		--if !IsValid(self.Core) and self.CoreAllowRemove == false then
-		--	self:CoreEffect()
-		--end
 	end
 	
 	--local trace = self.Owner:GetEyeTrace()
@@ -976,7 +976,7 @@ function SWEP:Think() -- Think function for the weapon.
 		if !styleCvar and CurTime() >= self.PropLockTime then
 			if !IsValid(HP) then self:SetHP(nil) return end
 			local HPrad = HP:BoundingRadius()--/1.5
-			if (HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.GrabDistance+HPrad))):Length() >= 80 then
+			if ((HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.GrabDistance+HPrad))):LengthSqr()) / 80 >= 80 then
 				self:Drop()
 			end
 		end
@@ -1165,15 +1165,18 @@ local function HookPhysicsHurting(self, entity)
 	entity.SCGG_HurtByHookPhys = nil
 	
 	local function SCGG_Collide_Damage( entity, data )
-		if !entity.SCGG_HurtByHookPhys and data.OurOldVelocity:Length() > 250 then
+		--local distance = data.OurOldVelocity:Length()
+		local distance = data.OurOldVelocity:LengthSqr() / 1550
+		if !entity.SCGG_HurtByHookPhys and distance > 250 then
 			entity.SCGG_HurtByHookPhys = true
 			local dmginfo = DamageInfo()
-			dmginfo:SetDamage( data.OurOldVelocity:Length()/10 )
+			dmginfo:SetDamage( distance/10 )
 			--print(dmginfo:GetDamage())
 			dmginfo:SetDamageForce( self.Owner:GetPos() )
 			dmginfo:SetReportedPosition( self.Owner:GetPos() )
 			dmginfo:SetAttacker( self.Owner )
 			dmginfo:SetInflictor( self.Weapon )
+			--print("damage: "..dmginfo:GetDamage())
 			entity:TakeDamageInfo(dmginfo)
 			if IsValid(data.HitEntity) and data.HitEntity:Health() > 0 and 
 			((!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC(data.HitEntity)) then
@@ -1331,7 +1334,7 @@ local function AttackAffectTarget(self, tgt, isPunt)
 	end
 	
 	if (isPunt or NewRagdollFormed == true) and IsValid(ragdoll) then -- if is punting or new ragdoll is formed for non-punting
-		for i = 1, ragdoll:GetPhysicsObjectCount() do
+		for i = 1, ragdoll:GetPhysicsObjectCount() - 1 do
 			local bone = ragdoll:GetPhysicsObjectNum(i)
 			
 			if bone and IsValid(bone) then
@@ -1404,7 +1407,7 @@ function SWEP:PrimaryAttack()
 	if IsValid(HP) then
 		local HPrad = HP:BoundingRadius()
 		--print((HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.GrabDistance+HPrad))):Length() >= 80)
-		if (HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.GrabDistance+HPrad))):Length() >= 80 then
+		if ((HP:GetPos()-(self.Owner:GetShootPos()+self.Owner:GetAimVector()*(self.GrabDistance+HPrad))):LengthSqr()) / 80 >= 80 then
 			return
 		else
 			self:DropAndShoot()
@@ -1544,7 +1547,7 @@ function SWEP:PrimaryAttack()
 	
 	if tgt:IsRagdoll() then
 		if SERVER then
-			--[[for i = 1, tgt:GetPhysicsObjectCount() do
+			--[[for i = 1, tgt:GetPhysicsObjectCount() - 1 do
 				local bone = tgt:GetPhysicsObjectNum(i)
 				
 				if bone and bone.IsValid and bone:IsValid() then
@@ -1562,7 +1565,7 @@ function SWEP:PrimaryAttack()
 		tgt:SCGG_RagdollZapper()
 		tgt:SCGG_RagdollCollideTimer()
 		
-		for i = 1, tgt:GetPhysicsObjectCount() do
+		for i = 1, tgt:GetPhysicsObjectCount() - 1 do
 			local bone = tgt:GetPhysicsObjectNum(i)
 			
 			if bone and bone.IsValid and bone:IsValid() then
@@ -1657,7 +1660,7 @@ function SWEP:DropAndShoot()
 		end
 		--RagdollVisual(HP, 1)
 		
-		for i = 1, HP:GetPhysicsObjectCount() do
+		for i = 1, HP:GetPhysicsObjectCount() - 1 do
 			local bone = HP:GetPhysicsObjectNum(i)
 			
 			if bone and bone.IsValid and bone:IsValid() then
@@ -1759,7 +1762,8 @@ function SWEP:SecondaryAttack()
 	--or ( tgt:IsNPC() or tgt:IsPlayer() or tgt:IsRagdoll() ) and ( styleCvar <= 0 and tgt:GetMass() > self.HL2MaxMass or styleCvar > 0 and tgt:GetMass() > self.MaxMass ) -- Non-functioning
 	then return end
 	
-	local Dist = (tgt:GetPos()-self.Owner:GetPos()):Length()
+	local maxPickupRange = self:GetMaxPickupRange()
+	local Dist = ((tgt:GetPos()-self.Owner:GetPos()):LengthSqr()) / maxPickupRange
 	local HasPickedUp = false
 	
 	local function DoPickup(target)
@@ -1785,11 +1789,37 @@ function SWEP:SecondaryAttack()
 		end
 		self.Secondary.Automatic = false
 		
-		if target:IsRagdoll() and trace.Entity == target then
-			self.HPBone = trace.PhysicsBone
+		if target:IsRagdoll() then
+			if trace.Entity == target then 
+				self.HPBone = trace.PhysicsBone
+			--[[else
+				local oldTgt = trace.Entity
+				local tPos = trace.HitPos
+				local setBone = -1
+				local tempDist = 32767
+				print("fired else, bonecount: "..target:GetBoneCount())
+				
+				for i = 1, target:GetBoneCount() - 1 do
+					local bonePos = target:GetBonePosition(i)
+					
+					local distance = (bonePos-tPos):LengthSqr()
+					--local dist2 = (bonePos-tPos):Length()
+					--print("Distance of bone "..i.." of SCGG's target: "..dist2)
+					print("Sqr Distance of bone "..i.." of SCGG's target: "..distance)
+					if distance < tempDist then
+						tempDist = distance
+						setBone = i
+					end
+				end
+				
+				print("setBone: "..setBone)
+				if setBone > -1 then
+					self.HPBone = setBone
+				end--]]
+			end
 		end -- Uncomment out to reenable the buggy self.HPBone code parts
 	--[[elseif !styleCvar and target:IsRagdoll() then
-		for d = 1, ent:GetPhysicsObjectCount() do
+		for d = 1, ent:GetPhysicsObjectCount() - 1 do
 			local bone = ent:GetPhysicsObjectNum(d)
 		
 			if bone and bone.IsValid and bone:IsValid() then
@@ -1799,7 +1829,7 @@ function SWEP:SecondaryAttack()
 		end--]]
 	end
 	
-	if SERVER and !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) and Dist < self:GetMaxPickupRange() then
+	if SERVER and !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) and Dist < maxPickupRange then
 		if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
 		
 		if tgt:IsNPC() or tgt:IsNextBot() and (
@@ -1830,7 +1860,7 @@ function SWEP:SecondaryAttack()
 		end
 		
 		--if tgt:IsRagdoll() or self:AllowedClass(tgt) and tgt:GetPhysicsObject():IsMoveable() then--and !IsConstrainedToWorld(self, tgt) then
-			if Dist < self:GetMaxPickupRange() then
+			if Dist < maxPickupRange then
 				DoPickup(tgt)
 			else
 				--print("gay")
@@ -1845,9 +1875,9 @@ function SWEP:Pickup()
 	
 	if !IsValid(HP) then self.Weapon:SendWeaponAnim( ACT_VM_PRIMARYATTACK ) return end
 	
-	self.Weapon:EmitSound("Weapon_MegaPhysCannon.Pickup")
 	self.Weapon:StopSound("Weapon_PhysCannon.OpenClaws")
 	self.Weapon:StopSound("Weapon_PhysCannon.CloseClaws")
+	self.Weapon:EmitSound("Weapon_MegaPhysCannon.Pickup")
 	ToggleHoldSound(self, true)
 	self.Weapon:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
 	
@@ -2004,7 +2034,7 @@ function SWEP:DropGeneral()
 		vel.z = 0
 		
 		if HP:IsRagdoll() then
-			for d = 1, HP:GetPhysicsObjectCount() do
+			for d = 1, HP:GetPhysicsObjectCount() - 1 do
 				local bone = HP:GetPhysicsObjectNum(d)
 			
 				if bone and bone.IsValid and IsValid(bone) then

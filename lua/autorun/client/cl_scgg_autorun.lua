@@ -130,7 +130,10 @@ local function DoParticleEffects(entity)
 				local emitter = ParticleEmitter(pos, false)
 				
 				-- Small core particles
-				for j = 0, 16 do
+				local jReps = 16
+				print(timer.RepsLeft(timer_name))
+				if timer.RepsLeft(timer_name) <= 5 then jReps = jReps * 3 end
+				for j = 0, jReps do
 					local offset = pos + VectorRand( -24.0, 24.0 )
 
 					local sParticle = emitter:Add( "effects/strider_muzzle", offset )
