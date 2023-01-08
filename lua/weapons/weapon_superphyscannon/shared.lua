@@ -169,6 +169,10 @@ local function ToggleHoldSound(swep, boolean)
 	end
 end
 
+-- SF_PHYSPROP_ENABLE_ON_PHYSCANNON		0x000040	(64)
+-- SF_PHYSPROP_PREVENT_PICKUP			0x000200	(512)
+-- SF_PHYSBOX_ENABLE_ON_PHYSCANNON		0x20000		(131072)
+-- SF_PHYSBOX_NEVER_PICK_UP				0x200000	(2097152)
 local function IsMotionEnabledOrGrabbableFlag(tgt)
 	if IsValid(tgt) and tgt:GetMoveType() == MOVETYPE_VPHYSICS and IsValid(tgt:GetPhysicsObject()) and 
 	(
@@ -238,7 +242,7 @@ local function FadeScreen(ply)
 	end
 end
 
-function SWEP:GetHP()
+--[[function SWEP:GetHP()
 	return self:GetNWEntity("SCGG_HP", nil)
 	--if !SERVER then return nil end
 	--return self.HP
@@ -255,6 +259,17 @@ end
 function SWEP:SetTP(entity)
 	self:SetNWEntity("SCGG_TP", entity)
 	--if !SERVER then return end
+end--]]
+
+function SWEP:SetupDataTables()
+	self:NetworkVar( "Entity", 0, "HP" )
+	self:NetworkVar( "Entity", 1, "TP" )
+	self:NetworkVar( "Bool", 0, "Glow" )
+	--if SERVER then
+		self:SetHP(nil)
+		self:SetTP(nil)
+		self:SetGlow(false)
+	--end
 end
 
 local function InitChangeableVars(self)
@@ -1802,11 +1817,11 @@ function SWEP:SecondaryAttack()
 				for i = 1, target:GetBoneCount() - 1 do
 					local bonePos = target:GetBonePosition(i)
 					
-					local distance = (bonePos-tPos):LengthSqr()
+					local distance = (bonePos-tPos):LengthSqr() / maxPickupRange
 					--local dist2 = (bonePos-tPos):Length()
 					--print("Distance of bone "..i.." of SCGG's target: "..dist2)
 					print("Sqr Distance of bone "..i.." of SCGG's target: "..distance)
-					if distance < tempDist then
+					if distance > tempDist then
 						tempDist = distance
 						setBone = i
 					end
@@ -2579,13 +2594,7 @@ end
 	
 function SWEP:GlowEffect()
 	if ConVarExists("scgg_no_effects") and GetConVar("scgg_no_effects"):GetBool() then return end
-	self:SetNWBool("SCGG_Glow", true)
-	--[[if !IsValid(self.Core) then
-		self:CoreEffect()
-	end
-	if !IsValid(self.Core) then return end
-	self.Core:SetNWBool("SCGG_Glow", true)
-	self.Glow = true--]]
+	self:SetGlow(true)
 end
 
 function SWEP:RemoveCore()
@@ -2597,12 +2606,7 @@ function SWEP:RemoveCore()
 end
 
 function SWEP:RemoveGlow()
-	self:SetNWBool("SCGG_Glow", false)
-	--[[if !self.Core then return end
-	if !IsValid(self.Core) then return end
-	self.Weapon:SetNWBool("Glow", false)
-	self.Core:SetNWBool("SCGG_Glow", false)
-	self.Glow = nil--]]
+	self:SetGlow(false)
 end
 
 end

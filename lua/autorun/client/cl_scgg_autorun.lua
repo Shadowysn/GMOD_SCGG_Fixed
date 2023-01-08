@@ -7,7 +7,7 @@ CreateClientConVar( "cl_scgg_viewmodel", "models/weapons/shadowysn/c_superphysca
 	"Set the viewmodel of your Super Gravity Gun. Does not affect worldmodel." )
 
 CreateClientConVar( "cl_scgg_physgun_color", "0", true, true, 
-	"Set the glow color to your physgun's color in first-person. Third-person is not affected. 1 = Weapon color, 2 = Physgun color" )
+	"Set the glow color to your physgun's color in first-person. Third-person is not affected. 1 = Player color, 2 = Physgun color" )
 
 CreateClientConVar( "cl_scgg_effects_mode", "0", true, true, 
 	"Set the effect style to emulate from a game. Third-person is not affected. 0 = Half-Life 2, 1 = Half-Life 2 Survivor" )

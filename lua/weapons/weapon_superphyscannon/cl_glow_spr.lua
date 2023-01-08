@@ -245,7 +245,7 @@ local function DoEffect(wep_ent, nFOV, viewM)
 		end
 	end
 	
-	local glow_bool = wep_ent:GetNWBool("SCGG_Glow", false)
+	local glow_bool = wep_ent:GetGlow()
 	if glow_bool or IsValid(wep_ent.Owner) and wep_ent.Owner:IsPlayer() and wep_ent.Owner:KeyDown(IN_ATTACK2) then
 		-- Active Core (Glowing)
 		if isView then

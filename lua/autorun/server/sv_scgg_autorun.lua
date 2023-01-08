@@ -94,7 +94,7 @@ if !ConVarExists("scgg_zap") then//
 end--4
 
 if !ConVarExists("scgg_allow_others") then//
-   CreateConVar("scgg_allow_others", '0', (FCVAR_ARCHIVE), 
+   CreateConVar("scgg_allow_others", '1', (FCVAR_ARCHIVE), 
    "to allow weapon interaction of other objects, including addons. (WILL have a chance to cause bugs.)", 
    0, 1)
 end--5

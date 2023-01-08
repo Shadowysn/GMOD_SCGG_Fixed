@@ -215,6 +215,21 @@ function SWEP:StopClawSound()
 	end
 end
 
+function SWEP:Deploy()
+	--[[print("didit")
+	if ConVarExists("cl_scgg_viewmodel") then
+		local newview_info = GetConVar("cl_scgg_viewmodel"):GetString()
+		if util.IsValidModel(newview_info) and self.ViewModel != newview_info then
+			-- Attempt to set the chosen cl_scgg_viewmodel model.
+			self.ViewModel = newview_info
+			local vm = self.Owner:GetViewModel()
+			vm:SetWeaponModel(newview_info, self)
+			vm:InvalidateBoneCache()
+			print("didit")
+		end
+	end--]]
+end
+
 function SWEP:Think()
 	if ConVarExists("cl_scgg_viewmodel") then
 		local newview_info = GetConVar("cl_scgg_viewmodel"):GetString()
@@ -278,7 +293,7 @@ function SWEP:Think()
 	elseif (clawCvar > 0 and clawCvar < 2) then
 		self:OpenClaws( false )
 	elseif clawCvar >= 2 then
-		local glow_bool = self:GetNWBool("SCGG_Glow", false)
+		local glow_bool = self:GetGlow()
 		if glow_bool then
 			self:StopClawSound()
 		end
