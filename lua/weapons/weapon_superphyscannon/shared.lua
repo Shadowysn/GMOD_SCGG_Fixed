@@ -438,7 +438,7 @@ function SWEP:OwnerChanged() -- Owner changed. Useful for changing hold type bet
 	DetermineHoldType(self)
 end
 
-local function DirectCheck(self, tgt) -- Check if can be punted/grabbed, but without distance checking. - DirectCheck(self, entity)
+local function DirectCheck(self, tgt, ignoreHP) -- Check if can be punted/grabbed, but without distance checking. - DirectCheck(self, entity)
 	--print(tgt:GetMoveType())
 	
 	-- v I sincerely apologize for this mess of a check, but it gets the job done.
@@ -477,7 +477,11 @@ local function DirectCheck(self, tgt) -- Check if can be punted/grabbed, but wit
 						!self:FriendlyNPC( tgt )
 					)
 					and
-					tgt:Health() <= self:GetMaxTargetHealth()
+					(
+						tgt:Health() <= self:GetMaxTargetHealth()
+						or
+						ignoreHP != nil
+					)
 				)
 				or
 				tgt:IsPlayer()
@@ -503,7 +507,7 @@ local function PuntCheck(self, tgt) -- Punting check, use this as if it were som
 		DistancePunt_Test = self:GetMaxPuntRange()+10
 	end
 	
-	if (DirectCheck(self, tgt) and 
+	if (DirectCheck(self, tgt, true) and 
 	DistancePunt_Test < self:GetMaxPuntRange() )
 	--and !self.Owner:KeyDown(IN_ATTACK) -- Don't know why I commented this out, but I must've did it for a reason. Glitch, maybe?
 	then
@@ -1248,7 +1252,7 @@ local function AttackAffectTarget(self, tgt, isPunt)
 	if isPunt == nil then isPunt = true end
 	
 	for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-		if rag:IsRagdoll() and math.Truncate(rag:GetCreationTime(),2) == math.Truncate(CurTime(),2) then
+		if rag:IsRagdoll() and math.Truncate(rag:GetCreationTime(),1) == math.Truncate(CurTime(),1) then
 			ragdoll = rag
 			break
 		end
@@ -1281,7 +1285,7 @@ local function AttackAffectTarget(self, tgt, isPunt)
 	elseif !isPunt and !IsValid(ragdoll) then
 		-- This makes the SCGG grab a potential gib nearby
 		for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-			if (rag:IsRagdoll() or rag:GetClass() == "prop_physics") and math.Truncate(rag:GetCreationTime(),2) == math.Truncate(CurTime(),2) then
+			if (rag:IsRagdoll() or rag:GetClass() == "prop_physics") and math.Truncate(rag:GetCreationTime(),1) == math.Truncate(CurTime(),1) then
 				ragdoll = rag
 				break
 			end
