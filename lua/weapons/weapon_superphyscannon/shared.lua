@@ -1248,7 +1248,7 @@ local function AttackAffectTarget(self, tgt, isPunt)
 	if isPunt == nil then isPunt = true end
 	
 	for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-		if rag:IsRagdoll() and rag:GetCreationTime() == CurTime() then
+		if rag:IsRagdoll() and math.Truncate(rag:GetCreationTime(),2) == math.Truncate(CurTime(),2) then
 			ragdoll = rag
 			break
 		end
@@ -1281,7 +1281,7 @@ local function AttackAffectTarget(self, tgt, isPunt)
 	elseif !isPunt and !IsValid(ragdoll) then
 		-- This makes the SCGG grab a potential gib nearby
 		for _,rag in ipairs( ents.FindInSphere( tgt:GetPos(), tgt:GetModelRadius() ) ) do
-			if (rag:IsRagdoll() or rag:GetClass() == "prop_physics") and rag:GetCreationTime() == CurTime() then
+			if (rag:IsRagdoll() or rag:GetClass() == "prop_physics") and math.Truncate(rag:GetCreationTime(),2) == math.Truncate(CurTime(),2) then
 				ragdoll = rag
 				break
 			end
@@ -1458,12 +1458,6 @@ function SWEP:PrimaryAttack()
 	
 	if SERVER then
 		if ((tgt:IsNPC() or tgt:IsNextBot()) and !self:AllowedClass(tgt) and !self:NotAllowedClass(tgt) or tgt:IsPlayer()) then
-			--if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
-			--if (tgt:IsPlayer() and server_settings.Int( "sbox_plpldamage" ) == 1) then
-				--self.Weapon:EmitSound("Weapon_MegaPhysCannon.DryFire")
-				--return
-			--end
-			
 			AttackDoDamage(self, tgt, trace.HitPos, true)
 			
 			--if tgt:GetClass() == "npc_antlion_worker" then return end
@@ -1479,14 +1473,14 @@ function SWEP:PrimaryAttack()
 			end
 			if IsValid(ragdoll) then
 				ragdoll:SCGG_RagdollCollideTimer()
-		
+			
 				ragdoll:SetPhysicsAttacker(self.Owner, 10)
 				ragdoll:SetCollisionGroup( self.HPCollideG )
-		
+			
 				--tgt:DropWeapon( tgt:GetActiveWeapon() )
 				--if tgt:HasWeapon()
 				ragdoll:SetMaterial( tgt:GetMaterial() )
-		
+			
 				ragdoll:Fire("FadeAndRemove","",120)
 			end
 			
@@ -1497,8 +1491,6 @@ function SWEP:PrimaryAttack()
 			if zapCvar and IsValid(ragdoll) then
 				ragdoll:Fire("StartRagdollBoogie","",0)
 			end
-			
-			--self:DoSparks()
 		elseif tgt:GetMoveType() != MOVETYPE_VPHYSICS and tgt:Health() > 0 then
 			local dmginfo = DamageInfo()
 			dmginfo:SetDamage( self:GetMaxTargetHealth() )

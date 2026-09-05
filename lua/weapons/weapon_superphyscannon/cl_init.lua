@@ -23,65 +23,19 @@ SWEP.DrawWeaponInfoBox	= false
 
 --SWEP.WepSelectIcon = surface.GetTextureID("weapons/Megaphyscannon")
 
---[[surface.CreateFont("SCGG_Wep_Font", {
-	font = "HalfLife2",
-	size = ScreenScaleH(64),
-	weight = 0,
-	blursize = 0,
-	scanlines = 0,
-	antialias = true,
-	additive = true,
-})
-
-surface.CreateFont("SCGG_Wep_Font_Glow", {
-	font = "HalfLife2",
-	size = ScreenScaleH(64),
-	weight = 0,
-	blursize = ScreenScaleH(4),
-	scanlines = 2,
-	antialias = true,
-	additive = true,
-})--]]
-
 function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
-	surface.SetTextColor(255, 235, 0, alpha)
+	surface.SetTextColor(255, 225, 0, alpha)
 	
-	surface.SetFont("SCGG_Wep_Font")
+	surface.SetFont("WeaponIcons")
 	local w, h = surface.GetTextSize("m")
 	
 	surface.SetTextPos(x + (wide / 2) - (w / 2), y + (tall / 2) - (h / 2))
 	surface.DrawText("m")
 	
 	surface.SetTextPos(x + (wide / 2) - (w / 2), y + (tall / 2) - (h / 2))
-	surface.SetFont("SCGG_Wep_Font_Glow")
+	surface.SetFont("WeaponIconsSelected")
 	surface.DrawText("m")
 end
-
---[[local GetRag = {} -- For some infathomable reason, putting this in cl_scgg_autorun doesn't work.
-
-net.Receive("SCGG_Ragdoll_GetPlayerColor", function() 
-	local rag = net.ReadInt(32)
-	local ply = net.ReadInt(32)
-	local col = net.ReadVector()
-	if !col or col == nil then return end
-	GetRag = {rag = rag, ply = ply, col = col}
-end)
-
-hook.Add("NetworkEntityCreated","SCGG_Ragdoll_SetPlayerColor",function(ent)
-	if not GetRag.rag then return end
-	if GetRag.rag == ent:EntIndex() then
-		local getcol = GetRag.col
-		local getrag_ply = Entity(GetRag.ply)
-		local getrag_rag = Entity(GetRag.rag)
-		getrag_rag.GetPlayerColor = function(self) return getcol end
-		
-		if IsValid(getrag_ply) and getrag_ply:GetModel() == getrag_rag:GetModel() then
-			getrag_rag:SnatchModelInstance(getrag_ply)
-		end
-		
-		GetRag = {}
-	end
-end)--]]
 
 include("cl_glow_spr.lua")
 
@@ -307,8 +261,8 @@ function SWEP:Think()
 		else
 			tgt = tracetgt
 		end
-		--print(tgt)
-		if IsValid(self:GetTP()) then
+		--print(self:GetHP())
+		if IsValid(self:GetHP()) then
 			timer.Remove("scgg_claw_close_delay"..self:EntIndex())
 			self:OpenClaws( false )
 		elseif self:PickupCheck(tgt) then

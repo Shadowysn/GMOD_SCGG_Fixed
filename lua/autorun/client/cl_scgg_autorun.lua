@@ -167,7 +167,7 @@ local function ScreenScaleH(n)
 	return n * (ScrH() / 480)
 end
 
-surface.CreateFont("SCGG_Wep_Font", {
+--[[surface.CreateFont("SCGG_Wep_Font", {
 	font = "HalfLife2",
 	size = ScreenScaleH(64),
 	weight = 0,
@@ -185,7 +185,7 @@ surface.CreateFont("SCGG_Wep_Font_Glow", {
 	scanlines = 3,
 	antialias = true,
 	additive = true,
-})
+})--]]
 
 killicon.AddFont( "weapon_superphyscannon", "HL2MPTypeDeath", ",", Color( 255, 80, 0, 255 ) )
 
