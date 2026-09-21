@@ -1698,7 +1698,7 @@ function SWEP:SecondaryAttack()
 					timer.Remove("SCGG_NPCThinkFor"..self:EntIndex())
 				end
 				local state = self:GetOwner():GetNPCState()
-				if state == NPC_STATE_IDLE or state == NPC_STATE_ALERT then
+				if (state == NPC_STATE_IDLE or state == NPC_STATE_ALERT) and self.PropLockTime and CurTime() >= self.PropLockTime then
 					self:Drop()
 				end
 				self:Think()
@@ -1706,44 +1706,46 @@ function SWEP:SecondaryAttack()
 		end
 	end
 	
-	if SERVER and !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) and Dist < maxPickupRange then
-		if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
-		
-		if tgt:IsNPC() or tgt:IsNextBot() and (
-		(!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC(tgt) ) 
-		or tgt:IsPlayer() then
-			AttackDoDamage(self, tgt, trace.HitPos, false)
+	if SERVER then
+		if !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) and Dist < maxPickupRange then
+			if tgt:IsPlayer() and tgt:HasGodMode() == true then return end
 			
-			if tgt:Health() >= 1 then return end
-			
-			local ragdoll = AttackAffectTarget(self, tgt, false)
-			
-			DoPickup(ragdoll)
-		end
-	end
-	
-	if SERVER and !HasPickedUp and IsValid(tgt:GetPhysicsObject()) and tgt:GetMoveType() == MOVETYPE_VPHYSICS then
-		if IsMotionEnabledOrGrabbableFlag(tgt) then
-			tgt:GetPhysicsObject():EnableMotion( true )
-		end
-		local Mass = tgt:GetPhysicsObject():GetMass()
-		local vel = self:GetPullForce()/(Dist*0.002)
-		local ragvel = self.HL2PullForceRagdoll/(Dist*0.001)
-		
-		if !styleCvar then
-			if Mass >= (self:GetMaxMass()+1) and tgt:GetClass() != "prop_combine_ball" then
-				return
+			if tgt:IsNPC() or tgt:IsNextBot() and (
+			(!ConVarExists("scgg_friendly_fire") or GetConVar("scgg_friendly_fire"):GetBool()) or !self:FriendlyNPC(tgt) ) 
+			or tgt:IsPlayer() then
+				AttackDoDamage(self, tgt, trace.HitPos, false)
+				
+				if tgt:Health() >= 1 then return end
+				
+				local ragdoll = AttackAffectTarget(self, tgt, false)
+				
+				DoPickup(ragdoll)
 			end
 		end
 		
-		--if tgt:IsRagdoll() or self:AllowedClass(tgt) and tgt:GetPhysicsObject():IsMoveable() then--and !IsConstrainedToWorld(self, tgt) then
-			if Dist < maxPickupRange then
-				DoPickup(tgt)
-			else
-				--print("gay")
-				tgt:GetPhysicsObject():ApplyForceCenter(self:GetOwner():GetAimVector()*-vel )
+		if !HasPickedUp and IsValid(tgt:GetPhysicsObject()) and tgt:GetMoveType() == MOVETYPE_VPHYSICS then
+			if IsMotionEnabledOrGrabbableFlag(tgt) then
+				tgt:GetPhysicsObject():EnableMotion( true )
 			end
-		--end
+			local Mass = tgt:GetPhysicsObject():GetMass()
+			local vel = self:GetPullForce()/(Dist*0.002)
+			local ragvel = self.HL2PullForceRagdoll/(Dist*0.001)
+			
+			if !styleCvar then
+				if Mass >= (self:GetMaxMass()+1) and tgt:GetClass() != "prop_combine_ball" then
+					return
+				end
+			end
+			
+			--if tgt:IsRagdoll() or self:AllowedClass(tgt) and tgt:GetPhysicsObject():IsMoveable() then--and !IsConstrainedToWorld(self, tgt) then
+				if Dist < maxPickupRange then
+					DoPickup(tgt)
+				else
+					--print("gay")
+					tgt:GetPhysicsObject():ApplyForceCenter(self:GetOwner():GetAimVector()*-vel )
+				end
+			--end
+		end
 	end
 end
 

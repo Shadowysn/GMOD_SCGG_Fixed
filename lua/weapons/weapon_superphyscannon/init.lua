@@ -21,17 +21,36 @@ local function DetermineHoldType(swep)
 	
 	if swep:GetOwner():IsNPC() then
 		swep:SetHoldType( "shotgun" )
-		if SERVER then
-			if swep:GetOwner():Classify() == CLASS_METROPOLICE then
-				swep:SetHoldType( "smg" )
-			end
+		if swep:GetOwner():Classify() == CLASS_METROPOLICE then
+			swep:SetHoldType( "smg" )
 		end
+		
+		local function RepeatTimer()
+			timer.Simple(0.5, function()
+				if IsValid(swep) and IsValid(swep:GetOwner()) and swep:GetOwner():IsNPC() then
+					-- Some NPCs can be stupid and persistently keep firing while OOR, force them
+					if !IsValid(swep:GetHP()) and IsValid(swep:GetOwner():GetEnemy()) and 
+					((swep:GetOwner():GetEnemy():GetPos()-swep:GetOwner():GetPos()):LengthSqr()) / (swep:GetInternalVariable("m_fMaxRange1")) > (swep:GetInternalVariable("m_fMaxRange1")) then
+						--local schedule = swep:GetOwner():GetCurrentSchedule()
+						--if schedule == SCHED_RANGE_ATTACK1 then
+						if swep:GetOwner():IsCurrentSchedule(SCHED_RANGE_ATTACK1) then
+							print("Forcing SCHED_MOVE_TO_WEAPON_RANGE schedule")
+							swep:GetOwner():SetSchedule(SCHED_MOVE_TO_WEAPON_RANGE)
+						end
+					end
+					RepeatTimer()
+				end
+			end)
+		end
+		RepeatTimer()
 	else
 		swep:SetHoldType( swep.HoldType )
 	end
 end
 
 function SWEP:Initialize() -- Initialization stuff.
+	self:SetSaveValue("m_fMaxRange1", self:GetMaxPickupRange()-10)
+	self:SetSaveValue("m_fMinRange1", 0)
 	DetermineHoldType(self)
 	self:SetSkin(1)
 	InitChangeableVars(self)
