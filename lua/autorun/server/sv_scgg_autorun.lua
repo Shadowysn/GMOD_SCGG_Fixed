@@ -407,6 +407,19 @@ hook.Add("PostEntityTakeDamage","SCGG_NPC_Death_Post",function( ent, dmg )
 	end
 end)
 
+hook.Add("EntityTakeDamage","SCGG_NPCUser_NoHurt",function( ent, dmg )
+	if IsValid(ent) and ent:IsNPC() and ent:Health() > 0 then
+		local activeWep = ent:GetActiveWeapon()
+		if IsValid(activeWep) and activeWep:GetClass() == superphys_string then
+			local HP = activeWep:GetHP()
+			if IsValid(HP) and 
+			IsValid(dmg:GetAttacker()) and HP == dmg:GetAttacker() then
+				dmg:SetDamage(0)
+			end
+		end
+	end
+end)
+
 hook.Add("PostPlayerDeath","SCGG_Weapon_DropVaporize",function( ply )
 	if ConVarExists("scgg_extra_function") and !GetConVar("scgg_extra_function"):GetBool() then return end
 	

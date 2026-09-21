@@ -246,7 +246,7 @@ local function DoEffect(wep_ent, nFOV, viewM)
 	end
 	
 	local glow_bool = wep_ent:GetGlow()
-	if glow_bool or IsValid(wep_ent.Owner) and wep_ent.Owner:IsPlayer() and wep_ent.Owner:KeyDown(IN_ATTACK2) then
+	if glow_bool or IsValid(wep_ent:GetOwner()) and wep_ent:GetOwner():IsPlayer() and wep_ent:GetOwner():KeyDown(IN_ATTACK2) then
 		-- Active Core (Glowing)
 		if isView then
 			StartPos = GetAttachment("muzzle", mdl, nFOV)
@@ -410,7 +410,7 @@ local function DoEffect(wep_ent, nFOV, viewM)
 	end
 	
 	if math.random( 1,  500 ) == 1 and !IsValid(wep_ent:GetTP()) and !glow_bool and 
-	(!IsValid(wep_ent.Owner) or !wep_ent.Owner:IsPlayer() or (wep_ent.Owner:IsPlayer() and !wep_ent.Owner:KeyDown(IN_ATTACK2) and !wep_ent.Owner:KeyDown(IN_ATTACK))) then
+	(!IsValid(wep_ent:GetOwner()) or !wep_ent:GetOwner():IsPlayer() or (wep_ent:GetOwner():IsPlayer() and !wep_ent:GetOwner():KeyDown(IN_ATTACK2) and !wep_ent:GetOwner():KeyDown(IN_ATTACK))) then
 		BeginZap(wep_ent, math.random(1, 3))
 	end
 end

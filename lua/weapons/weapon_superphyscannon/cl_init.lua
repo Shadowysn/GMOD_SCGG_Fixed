@@ -54,7 +54,7 @@ end
 
 local function GetVMPoses(wep)
 	local active_string = "active"
-	local ViewModel = wep.Owner:GetViewModel()
+	local ViewModel = wep:GetOwner():GetViewModel()
 	local WorldModel = wep
 	
 	--[[local vm_active_pose = 0
@@ -115,7 +115,7 @@ function SWEP:AdjustClaws()
 	local ViewModel, WorldModel, --[[vm_active_pose, wm_active_pose,--]] active_string = GetVMPoses(self)
 	
 	if (ViewModel and IsValid(ViewModel)) or (WorldModel and IsValid(WorldModel)) then 
-		if !IsValid(self) or !IsValid(self.Owner) or !self.Owner:Alive() then return end
+		if !IsValid(self) or !IsValid(self:GetOwner()) or !self:GetOwner():Alive() then return end
 		if IsValid(ViewModel) then -- Viewmodel claws are moved here.
 			ViewModel:SetPoseParameter(active_string, self.PoseParam)
 			ViewModel:InvalidateBoneCache()
@@ -128,7 +128,7 @@ function SWEP:AdjustClaws()
 end
 
 function SWEP:OpenClaws( boolean ) -- Open claws function.
-	if !IsValid(self.Owner) or !self.Owner:Alive() then return end
+	if !IsValid(self:GetOwner()) or !self:GetOwner():Alive() then return end
 	
 	timer.Remove("scgg_claw_close_delay"..self:EntIndex()) -- Remove the delayed claw close timer often created by 'scgg_claw_mode 2'.
 	
@@ -141,7 +141,7 @@ function SWEP:OpenClaws( boolean ) -- Open claws function.
 	self.PoseParamDesired = 1
 end
 function SWEP:CloseClaws( boolean ) -- Close claws function.
-	if !IsValid(self.Owner) or !self.Owner:Alive() or self.PoseParamDesired <= 0 then return end
+	if !IsValid(self:GetOwner()) or !self:GetOwner():Alive() or self.PoseParamDesired <= 0 then return end
 	
 	--[[if (self.PoseParam >= 1 and self.PoseParamDesired >= 1) and !IsValid(self:GetTP()) and boolean then -- Sound emitting!
 		self:PlayClawSound(true) -- Should play close sound
@@ -176,7 +176,7 @@ function SWEP:Deploy()
 		if util.IsValidModel(newview_info) and self.ViewModel != newview_info then
 			-- Attempt to set the chosen cl_scgg_viewmodel model.
 			self.ViewModel = newview_info
-			local vm = self.Owner:GetViewModel()
+			local vm = self:GetOwner():GetViewModel()
 			vm:SetWeaponModel(newview_info, self)
 			vm:InvalidateBoneCache()
 			print("didit")
@@ -190,22 +190,22 @@ function SWEP:Think()
 		if util.IsValidModel(newview_info) and self.ViewModel != newview_info then
 			-- Attempt to set the chosen cl_scgg_viewmodel model.
 			self.ViewModel = newview_info
-			local vm = self.Owner:GetViewModel()
+			local vm = self:GetOwner():GetViewModel()
 			vm:SetWeaponModel(newview_info, self)
 			vm:InvalidateBoneCache()
 		end
 	end
 	
-	--local vimodel = self.Owner:GetViewModel()
+	--local vimodel = self:GetOwner():GetViewModel()
 	--print(vimodel:IsSequenceFinished())
 	--print(vimodel:GetSequenceActivityName(vimodel:GetSequence()))
 	
 	if ConVarExists("scgg_light") and GetConVar("scgg_light"):GetBool() then
-		if !self.Weapon:GetNWBool("Glow") then
-			if !self.Owner:LookupBone("ValveBiped.Bip01_R_Hand") then return end
+		if !self:GetGlow() then
+			if !self:GetOwner():LookupBone("ValveBiped.Bip01_R_Hand") then return end
 			local dlight = DynamicLight("lantern_"..self:EntIndex()) -- Create the light.
 			if dlight then
-				dlight.Pos = self.Owner:GetBonePosition(self.Owner:LookupBone("ValveBiped.Bip01_R_Hand"))
+				dlight.Pos = self:GetOwner():GetBonePosition(self:GetOwner():LookupBone("ValveBiped.Bip01_R_Hand"))
 				dlight.r = 200
 				dlight.g = 255
 				dlight.b = 255
@@ -215,10 +215,10 @@ function SWEP:Think()
 				--dlight.Style = 0
 			end
 		else
-			if !self.Owner:LookupBone("ValveBiped.Bip01_R_Hand") then return end
+			if !self:GetOwner():LookupBone("ValveBiped.Bip01_R_Hand") then return end
 			local dlight = DynamicLight("lantern_"..self:EntIndex())
 			if dlight then
-				dlight.Pos = self.Owner:GetBonePosition(self.Owner:LookupBone("ValveBiped.Bip01_R_Hand"))
+				dlight.Pos = self:GetOwner():GetBonePosition(self:GetOwner():LookupBone("ValveBiped.Bip01_R_Hand"))
 				dlight.r = 255
 				dlight.g = 255
 				dlight.b = 255
@@ -252,7 +252,7 @@ function SWEP:Think()
 			self:StopClawSound()
 		end
 		
-		local trace = self.Owner:GetEyeTrace()
+		local trace = self:GetOwner():GetEyeTrace()
 		local tracetgt = trace.Entity
 		local tgt = nil
 		
@@ -270,7 +270,7 @@ function SWEP:Think()
 		else
 			if !timer.Exists("scgg_claw_close_delay"..self:EntIndex()) and IsValid(self) then
 				timer.Create( "scgg_claw_close_delay"..self:EntIndex(), 0.6, 1, function()
-					if IsValid(self) and IsValid(self.Owner) and self.Owner:Alive() then
+					if IsValid(self) and IsValid(self:GetOwner()) and self:GetOwner():Alive() then
 						self:CloseClaws( true )
 					end
 				end)
@@ -298,7 +298,7 @@ end--]]
 
 -- Easier to not use this, as if you holster your weapon as it got it's viewmodel set, when you deploy it it'll glitch back to the old model
 --[[function SWEP:Think()
-	local VModel = self.Owner:GetViewModel()
+	local VModel = self:GetOwner():GetViewModel()
 	local cvar = GetConVar("cl_scgg_viewmodel"):GetString()
 	if VModel:GetModel() != cvar then
 		self.ViewModel = cvar
