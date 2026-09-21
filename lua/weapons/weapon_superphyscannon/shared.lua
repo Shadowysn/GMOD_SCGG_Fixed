@@ -1682,18 +1682,6 @@ function SWEP:SecondaryAttack()
 					self.HPBone = setBone
 				end--]]
 			end
-			if self:GetOwner():IsNPC() then
-				timer.Create("SCGG_NPCThinkFor"..self:EntIndex(), 0, 0, function()
-					if !IsValid(self) or !IsValid(self:GetHP()) then
-						timer.Remove("SCGG_NPCThinkFor"..self:EntIndex())
-					end
-					local state = self:GetOwner():GetNPCState()
-					if state == NPC_STATE_IDLE or state == NPC_STATE_ALERT then
-						self:Drop()
-					end
-					self:Think()
-				end)
-			end
 		end -- Uncomment out to reenable the buggy self.HPBone code parts
 	--[[elseif !styleCvar and target:IsRagdoll() then
 		for d = 1, ent:GetPhysicsObjectCount() - 1 do
@@ -1704,6 +1692,18 @@ function SWEP:SecondaryAttack()
 				bone:ApplyForceCenter(self:GetOwner():GetAimVector()*-ragvel )
 			end
 		end--]]
+		if self:GetOwner():IsNPC() then
+			timer.Create("SCGG_NPCThinkFor"..self:EntIndex(), 0, 0, function()
+				if !IsValid(self) or !IsValid(self:GetHP()) then
+					timer.Remove("SCGG_NPCThinkFor"..self:EntIndex())
+				end
+				local state = self:GetOwner():GetNPCState()
+				if state == NPC_STATE_IDLE or state == NPC_STATE_ALERT then
+					self:Drop()
+				end
+				self:Think()
+			end)
+		end
 	end
 	
 	if SERVER and !self:NotAllowedClass(tgt) and !self:AllowedClass(tgt) and Dist < maxPickupRange then
